@@ -5,6 +5,7 @@ import com.liquidly.api.repository.BomRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -14,6 +15,24 @@ public class BomService {
     private BomRepository bomRepository;
 
     public Bom createBom(Bom bom) {
+        if (bom.getQntd() == null) {
+            bom.setQntd(BigDecimal.ZERO);
+        }
+
+        if (bom.getRemainingQntd() == null) {
+            bom.setRemainingQntd(bom.getQntd());
+        }
+
+        String projectName = bom.getProjectName();
+        boolean hasProjectName = projectName != null && !projectName.trim().isEmpty();
+        if (!hasProjectName) {
+            String derived =
+                    bom.getProject() != null && bom.getProject().getName() != null && !bom.getProject().getName().trim().isEmpty()
+                            ? bom.getProject().getName().trim()
+                            : "Default Project";
+            bom.setProjectName(derived);
+        }
+
         return bomRepository.save(bom);
     }
 

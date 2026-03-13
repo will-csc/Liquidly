@@ -14,6 +14,23 @@ public class ProjectService {
     private ProjectRepository projectRepository;
 
     public Project createProject(Project project) {
+        if (project == null) {
+            throw new RuntimeException("Project is required");
+        }
+        if (project.getCompany() == null || project.getCompany().getId() == null) {
+            throw new RuntimeException("Company is required");
+        }
+        if (project.getName() == null || project.getName().trim().isEmpty()) {
+            throw new RuntimeException("Project name is required");
+        }
+
+        Long companyId = project.getCompany().getId();
+        String normalizedName = project.getName().trim();
+        if (projectRepository.existsByNameIgnoreCaseAndCompanyId(normalizedName, companyId)) {
+            throw new RuntimeException("Project name already in use");
+        }
+
+        project.setName(normalizedName);
         return projectRepository.save(project);
     }
 

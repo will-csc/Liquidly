@@ -1,0 +1,272 @@
+/* Global styles for Sign-Up Page */
+.signup-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%; /* Fill the 125vh body */
+  width: 100%; /* Fill the 125vw body */
+  background-color: #f5f5f5;
+  padding: 0;
+  overflow: hidden;
+}
+
+.signup-card {
+  display: flex;
+  background-color: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  overflow: hidden;
+  width: 80vw;
+  max-width: 1100px;
+  height: 85vh;
+  max-height: 800px;
+}
+
+/* Left Section - Visual */
+.signup-visual-section {
+  flex: 1;
+  background: linear-gradient(135deg, #004d00 0%, #003300 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  padding: 30px; /* Reduced padding */
+  position: relative;
+  overflow: hidden;
+}
+
+.visual-content {
+  text-align: center;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.signup-image {
+  width: 100%;
+  max-width: 236px;
+  max-height: 31.5vh;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 20px; /* Reduced margin */
+}
+
+.visual-text {
+  font-size: clamp(2rem, 3.5vw, 2.8rem); /* Slightly adjusted */
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Right Section - Form */
+.signup-form-section {
+  flex: 1;
+  padding: 2vh 2vw; /* Responsive padding */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow-y: hidden;
+  min-height: 0;
+  min-width: 0; /* Allow shrinking below content size */
+}
+
+/* Scrollbar styles removed as overflow is hidden */
+
+.signup-title {
+  color: #004d00;
+  font-size: clamp(1.5rem, 2.5vw, 2.2rem); /* Responsive font size */
+  font-weight: 700;
+  margin-bottom: 1vh;
+  text-align: center;
+  flex-shrink: 0; /* Prevent title from shrinking too much */
+}
+
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6vh; /* Responsive gap */
+  width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  flex-grow: 1;
+}
+
+.signup-form .form-group {
+  margin-bottom: 0.6vh !important; /* Responsive margin */
+  flex-shrink: 1; /* Allow shrinking */
+}
+
+.signup-form .form-group label {
+  font-size: clamp(0.8rem, 1.5vh, 1.1rem); /* Responsive font size */
+  margin-bottom: 0.5vh;
+}
+
+.signup-form .form-group input {
+  padding: 1vh 1vw; /* Responsive padding */
+  font-size: clamp(0.8rem, 1.5vh, 1.1rem);
+  height: auto;
+}
+
+.password-requirements {
+  font-size: clamp(0.7rem, 1.2vh, 0.9rem);
+  color: #666;
+  margin-top: -0.5vh;
+  margin-bottom: 0.5vh;
+  padding-left: 0.5vw;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.camera-section {
+  margin-bottom: 0.6vh;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.8vh;
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-shrink: 1;
+  overflow: hidden; /* Contain content */
+  min-height: clamp(96px, 12vh, 120px);
+}
+
+.camera-section--captured {
+  min-height: clamp(72px, 9vh, 96px);
+  padding: 0.6vh;
+}
+
+.camera-title {
+  display: block;
+  margin-bottom: 0.3vh;
+  font-weight: 600;
+  color: #004d00;
+  font-size: clamp(0.85rem, 1.4vh, 1.05rem);
+}
+
+.consent-wrapper {
+  margin-bottom: 0.5vh;
+}
+
+.consent-label {
+  display: flex;
+  align-items: center;
+  font-size: clamp(0.8rem, 1.4vh, 0.95rem);
+  cursor: pointer;
+  color: #333;
+}
+
+.consent-checkbox {
+  margin-right: 0.5vw;
+  width: clamp(14px, 2vh, 18px);
+  height: clamp(14px, 2vh, 18px);
+  accent-color: #004d00;
+}
+
+.btn-enable-camera {
+  padding: 0.8vh 1vw;
+  background-color: #004d00;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: 600;
+  font-size: clamp(0.9rem, 1.5vh, 1rem);
+  transition: background-color 0.2s;
+}
+
+.btn-enable-camera:hover {
+  background-color: #003300;
+}
+
+.camera-preview {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  max-height: 12vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: black;
+}
+
+.camera-preview video {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+}
+
+.button-group {
+    display: flex;
+    gap: 1vh;
+    margin-top: 0.5vh;
+    flex-shrink: 0;
+}
+
+.button-group button {
+    padding: 0.9vh 2vw;
+    font-size: clamp(0.9rem, 1.5vh, 1.1rem);
+}
+
+.btn-capture {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 14px;
+  background-color: white;
+  color: #004d00;
+  border: none;
+  border-radius: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.captured-image-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6vh;
+  padding: 0.7vh;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  max-height: 9vh;
+}
+
+.photo-success-message {
+  width: 100%;
+  text-align: center;
+  color: #004d00;
+  font-weight: 700;
+  font-size: clamp(0.9rem, 1.5vh, 1.05rem);
+  padding: 0.6vh 1vw;
+  border-radius: 8px;
+  background: rgba(0, 77, 0, 0.08);
+}
+
+.btn-retake {
+  padding: 0.6vh 1vw;
+  background-color: white;
+  color: #004d00;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: 700;
+  font-size: clamp(0.9rem, 1.5vh, 1rem);
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.btn-retake:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}

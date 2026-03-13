@@ -11,4 +11,5 @@ import java.util.List;
 public interface ProjectRepository extends JpaRepository<Project, Long> {
     List<Project> findByCompany(Company company);
     List<Project> findByCompanyId(Long companyId);
+    boolean existsByNameIgnoreCaseAndCompanyId(String name, Long companyId);
 }
