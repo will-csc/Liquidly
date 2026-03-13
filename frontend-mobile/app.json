@@ -4,26 +4,19 @@
     "slug": "liquidly",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/images/logo-green.png",
+    "icon": "./src/assets/images/logo-liquidly.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./src/assets/images/logo-liquidly.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true
     },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
-    },
+    "android": {},
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./src/assets/images/logo-liquidly.png"
     }
   }
 }

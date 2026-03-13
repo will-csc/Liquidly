@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../styles/theme';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -23,6 +24,7 @@ import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
 const SignIn = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -119,10 +121,17 @@ const SignIn = ({ navigation }: any) => {
     <ScreenLayout
       backgroundImage={require('../assets/images/login-image.png')}
       headerContent={
-        <BackButton 
-          style={styles.backButton}
-          onPress={() => navigation.navigate('Entry')} 
-        />
+        <View style={styles.headerContainer}>
+          <BackButton
+            style={styles.backButton}
+            onPress={() => navigation.navigate('Entry')}
+          />
+          <Image
+            source={require('../assets/images/logo-liquidly.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+        </View>
       }
     >
       <StatusBar style="light" />
@@ -145,7 +154,16 @@ const SignIn = ({ navigation }: any) => {
                 label="Password"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
+                rightIcon={
+                  <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)}>
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color={theme.colors.secondary}
+                    />
+                  </TouchableOpacity>
+                }
               />
 
               <Button
@@ -189,9 +207,20 @@ const SignIn = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  backButton: {
+  headerContainer: {
     position: 'absolute',
     top: 50,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  headerLogo: {
+    width: 180,
+    height: 60,
+  },
+  backButton: {
+    position: 'absolute',
     left: 20,
   },
   keyboardAvoidingView: {

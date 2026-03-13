@@ -6,17 +6,21 @@ interface InputProps extends TextInputProps {
   label: string;
   containerStyle?: ViewStyle;
   error?: string;
+  rightIcon?: React.ReactNode;
 }
 
-const Input: React.FC<InputProps> = ({ label, containerStyle, error, ...props }) => {
+const Input: React.FC<InputProps> = ({ label, containerStyle, error, rightIcon, ...props }) => {
   return (
     <View style={[styles.container, containerStyle]}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[styles.input, error ? styles.inputError : null]}
-        placeholderTextColor="#999"
-        {...props}
-      />
+      <View style={styles.inputWrapper}>
+        <TextInput
+          style={[styles.input, error ? styles.inputError : null, rightIcon ? styles.inputWithIcon : null]}
+          placeholderTextColor="#999"
+          {...props}
+        />
+        {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
+      </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
@@ -41,6 +45,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fff',
     width: '100%',
+  },
+  inputWrapper: {
+    position: 'relative',
+    width: '100%',
+  },
+  inputWithIcon: {
+    paddingRight: 45,
+  },
+  rightIcon: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    transform: [{ translateY: -12 }],
   },
   inputError: {
     borderColor: theme.colors.error,
