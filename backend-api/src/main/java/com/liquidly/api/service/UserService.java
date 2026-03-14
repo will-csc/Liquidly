@@ -8,6 +8,7 @@ import com.liquidly.api.model.Company;
 import com.liquidly.api.model.User;
 import com.liquidly.api.repository.CompanyRepository;
 import com.liquidly.api.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -350,5 +351,12 @@ public class UserService {
             dto.setCompanyName(user.getCompany().getCompanyName());
         }
         return dto;
+    }
+
+    public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found");
+        }
+        userRepository.deleteById(id);
     }
 }
