@@ -52,6 +52,8 @@ cd backend-api
 mvn spring-boot:run
 ```
 
+Note: `mvn run` is not a valid Maven command. To run the app you need a goal, like `spring-boot:run`.
+
 If the app starts successfully, it will log something like:
 
 - `Tomcat started on port 8080`
@@ -77,6 +79,21 @@ If you see a message that port 8080 is already in use:
 
 - Stop the other service using 8080, or
 - Start this backend on another port by setting `PORT` (or changing `server.port`).
+
+Example (PowerShell):
+
+```powershell
+$env:PORT=0
+mvn spring-boot:run
+```
+
+This picks a random free port; check the startup logs for the chosen port.
+
+If you prefer a Maven profile, this repo also supports a random port:
+
+```bash
+mvn -Palt-port spring-boot:run
+```
 
 ### PostgreSQL connection errors
 
