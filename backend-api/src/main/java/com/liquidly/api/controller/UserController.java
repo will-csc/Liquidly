@@ -7,9 +7,11 @@ import com.liquidly.api.dto.SignupRequest;
 import com.liquidly.api.dto.UserDTO;
 import com.liquidly.api.model.User;
 import com.liquidly.api.service.UserService;
+import com.liquidly.api.security.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +23,7 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+    private JwtService jwtService;
 
     @PostMapping("/signup")
     public ResponseEntity<UserDTO> signup(@RequestBody SignupRequest request) {
@@ -28,8 +31,16 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<UserDTO> login(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(userService.login(request));
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+
+        UserDTO user = userService.login(request);
+        String token = jwtService.generateToken(user.getEmail());
+        return ResponseEntity.ok(
+                Map.of(
+                        "token", token,
+                        "user", user
+                )
+        );
     }
 
     @PostMapping("/login-face")
