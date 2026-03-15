@@ -138,12 +138,21 @@ const SignUp = ({ navigation }: any) => {
 
   return (
     <ScreenLayout
+    
+    
       backgroundImage={require('../assets/images/signup-image.png')}
       headerContent={
-        <BackButton 
-          style={styles.backButton}
-          onPress={() => navigation.navigate('Entry')} 
-        />
+         <View style={styles.headerContainer}>
+          <BackButton
+            style={styles.backButton}
+            onPress={() => navigation.navigate('Entry')}
+          />
+          <Image
+            source={require('../assets/images/logo-liquidly.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+        </View>
       }
     >
       <StatusBar style="light" />
@@ -260,9 +269,23 @@ const SignUp = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  backButton: {
+ headerContainer: {
     position: 'absolute',
     top: 50,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  headerLogo: {
+    width: 180,
+    height: 60,
+  },
+  
+
+  backButton: {
+    position: 'absolute',
+    top: 10,
     left: 20,
   },
   keyboardAvoidingView: {

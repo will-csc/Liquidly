@@ -1,3 +1,7 @@
+// Entry.tsx
+// Onboarding com 3 slides, setas SOBREPOSTAS ao carrossel (sem barras laterais),
+// paginação por pontinhos e 3º slide menor. Compatível com Expo Web e mobile.
+
 import React, { useRef, useState } from 'react';
 import {
   View,
@@ -6,13 +10,25 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { theme } from '../styles/theme';
 
-const { width } = Dimensions.get('window');
+// === CONFIG RÁPIDA ===
+// Frações da largura/altura útil do slide para controlar imagens
+const IMG = {
+  defaultW: 0.75,
+  defaultH: 0.50,
+  thirdW: 0.68,  // 👈 3º slide MENOR (ajuste aqui)
+  thirdH: 0.42,
+};
+
+const BOTTOM_HEIGHT = 100; // altura do rodapé
+const ARROW_SIZE = 44;     // diâmetro do botão da seta
 
 const slides = [
   {
@@ -29,7 +45,7 @@ const slides = [
   },
   {
     key: 'slide3',
-    image: require('../assets/images/dash.png'),
+    image: require('../assets/images/dash.png'), // PNG transparente 2x2
     title: 'Track KPIs and priorities',
     subtitle: 'Keep everything on one clean, simple dashboard.',
   },
@@ -39,10 +55,49 @@ const Entry = ({ navigation }: any) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const onScrollEnd = (event: any) => {
-    const slide = Math.round(event.nativeEvent.contentOffset.x / width);
-    setActiveIndex(slide);
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  // Cada "página" do carrossel mede a largura da janela
+  const pageWidth = width;
+
+  // Altura útil do slide (desconta rodapé + safe areas)
+  const slideHeight = Math.max(
+    0,
+    height - BOTTOM_HEIGHT - insets.top - insets.bottom
+  );
+
+  // Posição vertical das setas (centralizadas no conteúdo)
+  const arrowTop = insets.top + slideHeight / 2 - ARROW_SIZE / 2;
+
+  // Índice robusto (Web/Mobile): pega a página mais próxima
+  const computeIndex = (offsetX: number) => {
+    const idx = Math.floor((offsetX + pageWidth / 2) / pageWidth);
+    return Math.max(0, Math.min(idx, slides.length - 1));
   };
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const idx = computeIndex(x);
+    if (idx !== activeIndex) setActiveIndex(idx);
+  };
+
+  const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const idx = computeIndex(x);
+    if (idx !== activeIndex) setActiveIndex(idx);
+  };
+
+  const goTo = (index: number) => {
+    const clamped = Math.max(0, Math.min(index, slides.length - 1));
+    scrollRef.current?.scrollTo({ x: clamped * pageWidth, animated: true });
+    setActiveIndex(clamped);
+  };
+  const goPrev = () => goTo(activeIndex - 1);
+  const goNext = () => goTo(activeIndex + 1);
+
+  const canPrev = activeIndex > 0;
+  const canNext = activeIndex < slides.length - 1;
 
   const goToSignIn = () => navigation.navigate('SignIn');
 
@@ -50,48 +105,105 @@ const Entry = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
+      {/* Skip */}
       <TouchableOpacity style={styles.skipButton} onPress={goToSignIn}>
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
 
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onScrollEnd}
-        contentContainerStyle={styles.scrollContainer}
-      >
-        {slides.map((slide) => (
-          <View key={slide.key} style={[styles.slide, { width }]}> 
-            <Image 
-              source={slide.image} 
-              style={[
-                styles.slideImage, 
-                slide.key === 'slide3' ? styles.slideImageLarge : null
-              ]} 
-              resizeMode="contain"
-              tintColor={slide.key === 'slide1' ? theme.colors.primary : undefined}
-            />
-            <Text style={styles.slideTitle}>{slide.title}</Text>
-            <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
-          </View>
-        ))}
-      </ScrollView>
+      {/* ===== CARROSSEL ===== */}
+      <View style={styles.carouselWrap}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          snapToInterval={pageWidth}     // 👈 páginas medem a largura da janela
+          snapToAlignment="start"
+          decelerationRate="fast"
+          showsHorizontalScrollIndicator={false}
+          onScroll={onScroll}
+          onMomentumScrollEnd={onScrollEnd}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingBottom: BOTTOM_HEIGHT }} // reserva o rodapé
+        >
+          {slides.map((slide) => {
+            const isThird = slide.key === 'slide3';
+            const imgWidth =
+              (isThird ? IMG.thirdW : IMG.defaultW) * pageWidth;
+            const maxImgHeight =
+              (isThird ? IMG.thirdH : IMG.defaultH) * slideHeight;
 
-      <View style={styles.pagination}>
+            return (
+              <View
+                key={slide.key}
+                style={[
+                  styles.slide,
+                  { width: pageWidth, height: slideHeight },
+                ]}
+              >
+                <Image
+                  source={slide.image}
+                  resizeMode="contain"
+                  style={[
+                    { width: imgWidth, maxHeight: maxImgHeight },
+                    slide.key === 'slide1' && { tintColor: theme.colors.primary },
+                  ]}
+                />
+
+                <Text style={styles.slideTitle}>{slide.title}</Text>
+                <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+
+        {/* ===== SETAS SOBREPOSTAS (sem colunas, sem barras) ===== */}
+        <View style={styles.arrowsOverlay} pointerEvents="box-none">
+          <TouchableOpacity
+            onPress={goPrev}
+            disabled={!canPrev}
+            style={[
+              styles.arrowButton,
+              { left: 8, top: arrowTop, opacity: canPrev ? 1 : 0.3 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Slide anterior"
+          >
+            <Text style={styles.arrowText}>‹</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={goNext}
+            disabled={!canNext}
+            style={[
+              styles.arrowButton,
+              { right: 8, top: arrowTop, opacity: canNext ? 1 : 0.3 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Próximo slide"
+          >
+            <Text style={styles.arrowText}>›</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ===== Paginação (bolinhas) ===== */}
+      <View style={[styles.pagination, { bottom: BOTTOM_HEIGHT + 10 }]}>
         {slides.map((_, index) => (
-          <View
+          <TouchableOpacity
             key={index}
+            onPress={() => goTo(index)}
             style={[
               styles.dot,
-              activeIndex === index ? styles.dotActive : null,
+              activeIndex === index && styles.dotActive,
             ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Ir para o slide ${index + 1}`}
           />
         ))}
       </View>
 
-      <View style={styles.bottomContainer}>
+      {/* ===== Rodapé ===== */}
+      <View style={[styles.bottomContainer, { paddingBottom: insets.bottom }]}>
         <TouchableOpacity style={styles.signInButton} onPress={goToSignIn}>
           <Text style={styles.signInText}>Sign In</Text>
         </TouchableOpacity>
@@ -107,46 +219,69 @@ const Entry = ({ navigation }: any) => {
   );
 };
 
+// ===== ESTILOS =====
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+
   skipButton: {
     position: 'absolute',
     top: 24,
     right: 20,
-    zIndex: 2,
+    zIndex: 3,
   },
   skipText: {
     color: theme.colors.secondary,
     fontWeight: '600',
     fontSize: 16,
   },
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  slide: {
+
+  // Wrapper do carrossel — posição relativa para podermos SOBREPOR as setas
+  carouselWrap: {
     flex: 1,
+    position: 'relative',
+  },
+
+  // Cada slide/página (sem overlay lateral e sem colunas)
+  slide: {
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.l,
     paddingVertical: theme.spacing.xl,
+    overflow: 'hidden', // evita glitches no Web
   },
-  slideImage: {
-    width: '75%',
-    height: '50%',
-    marginBottom: theme.spacing.l,
+
+  // Overlay das setas: não ocupa layout, não cria colunas, não desenha barras
+  arrowsOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    zIndex: 2,
   },
-  slideImageLarge: {
-    width: '90%',
-    height: '50%',
+  arrowButton: {
+    position: 'absolute',
+    width: ARROW_SIZE,
+    height: ARROW_SIZE,
+    borderRadius: ARROW_SIZE / 2,
+    backgroundColor: 'rgba(0,0,0,0.06)', // círculo suave, sem barra lateral
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  arrowText: {
+    color: theme.colors.primary,
+    fontSize: 26,
+    fontWeight: '900',
+    lineHeight: 26,
+  },
+
+  // Título e subtítulo
   slideTitle: {
     fontSize: theme.fontSize.xxxl,
     fontWeight: 'bold',
     color: theme.colors.primary,
     textAlign: 'center',
+    marginTop: theme.spacing.m,
     marginBottom: theme.spacing.s,
   },
   slideSubtitle: {
@@ -156,29 +291,36 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     maxWidth: '80%',
   },
+
+  // Paginação
   pagination: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 2,
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 10,
-    marginBottom: 20,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#ccc',
-    marginHorizontal: 4,
+    marginHorizontal: 6,
   },
   dotActive: {
     backgroundColor: theme.colors.primary,
+    transform: [{ scale: 1.15 }],
   },
+
+  // Rodapé
   bottomContainer: {
     flexDirection: 'row',
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 100,
+    height: BOTTOM_HEIGHT,
     backgroundColor: theme.colors.background,
   },
   signInButton: {
