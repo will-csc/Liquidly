@@ -44,7 +44,8 @@ api.interceptors.request.use(
     }
     const token = userStorage.getToken();
     if (token) {
-      config.headers = { ...config.headers, Authorization: `Bearer ${token}` };
+      const base = (config.headers && typeof config.headers === 'object') ? (config.headers as Record<string, unknown>) : {};
+      config.headers = { ...base, Authorization: `Bearer ${token}` };
     }
     return config;
   },

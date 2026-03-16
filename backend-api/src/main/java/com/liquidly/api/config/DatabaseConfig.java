@@ -3,15 +3,23 @@ package com.liquidly.api.config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.liquidly.api.model.Company;
+import com.liquidly.api.model.User;
+import com.liquidly.api.repository.CompanyRepository;
+import com.liquidly.api.repository.UserRepository;
+
 import javax.sql.DataSource;
 import java.net.URI;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Configuration
 public class DatabaseConfig {
@@ -111,6 +119,52 @@ public class DatabaseConfig {
                 .username("sa")
                 .password("password")
                 .build();
+    }
+
+    @Bean
+    public CommandLineRunner databaseStartupCheck(DataSource dataSource, UserRepository userRepository, CompanyRepository companyRepository) {
+        return args -> {
+            try (Connection connection = dataSource.getConnection()) {
+                DatabaseMetaData meta = connection.getMetaData();
+                String product = meta == null ? "" : meta.getDatabaseProductName();
+                String url = meta == null ? "" : meta.getURL();
+                logger.info("Conexão bem feita no banco de dados (produto={}, url={})", product, sanitizeJdbcUrlForLog(url));
+
+                String email = "teste@liquidly.com";
+                if (userRepository.existsByEmail(email)) {
+                    logger.info("Usuario teste já existe: {}", email);
+                    return;
+                }
+
+                Company company = companyRepository.findByCompanyName("Liquidly Test")
+                        .orElseGet(() -> {
+                            Company c = new Company();
+                            c.setCompanyName("Liquidly Test");
+                            return companyRepository.save(c);
+                        });
+
+                User u = new User();
+                u.setName("Usuario Teste");
+                u.setEmail(email);
+                u.setPassword("teste123");
+                u.setCompany(company);
+                u.setRetrieveCode(generateUniqueRetrieveCode(userRepository));
+                userRepository.save(u);
+                logger.info("Usuario teste inserido: email={}, companyId={}", email, company.getId());
+            } catch (Exception e) {
+                logger.warn("Falha ao validar/inserir usuario teste no banco: {}", e.getMessage());
+            }
+        };
+    }
+
+    private String generateUniqueRetrieveCode(UserRepository userRepository) {
+        for (int i = 0; i < 10; i++) {
+            String code = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+            if (!userRepository.existsByRetrieveCode(code)) {
+                return code;
+            }
+        }
+        return UUID.randomUUID().toString().replace("-", "");
     }
 
     private DataSource createDataSource(String name, String url, String username, String password) {

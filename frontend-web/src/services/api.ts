@@ -81,6 +81,9 @@ api.interceptors.request.use(
     }
     const token = getStoredToken();
     if (token) {
+      if (!config.headers) {
+        config.headers = {} as unknown as typeof config.headers;
+      }
       const h = config.headers as unknown as { set?: (k: string, v: string) => void; [k: string]: unknown };
       if (typeof h?.set === 'function') {
         h.set('Authorization', `Bearer ${token}`);

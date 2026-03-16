@@ -105,6 +105,7 @@ const ControlPanelPage = () => {
                     className="w-full text-left px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors flex items-center gap-3 font-medium"
                     onClick={() => {
                       localStorage.removeItem("user");
+                      localStorage.removeItem("token");
                       navigate("/login", { replace: true });
                       setIsMenuOpen(false);
                     }}

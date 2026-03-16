@@ -12,6 +12,9 @@ import ConversionsPage from '../pages/ConversionsPage';
 import ProjectsPage from '../pages/ProjectsPage';
 
 const hasValidSession = () => {
+  const token = localStorage.getItem("token");
+  if (token && token.trim().length > 0) return true;
+
   const raw = localStorage.getItem("user");
   if (!raw) return false;
   try {
