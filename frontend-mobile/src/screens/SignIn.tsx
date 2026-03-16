@@ -52,8 +52,9 @@ const SignIn = ({ navigation }: any) => {
           setIsCameraVisible(false);
           setLoading(true);
           try {
-            const user = await authService.loginFace({ faceImage: 'data:image/jpeg;base64,' + photo.base64 });
-            await userStorage.setUser(user);
+            const auth = await authService.loginFace({ faceImage: 'data:image/jpeg;base64,' + photo.base64 });
+            await userStorage.setUser(auth.user);
+            await userStorage.setToken(auth.token);
             navigation.replace('Main');
           } catch (error: any) {
             console.error('Face Login failed:', error);
@@ -77,8 +78,9 @@ const SignIn = ({ navigation }: any) => {
 
     setLoading(true);
     try {
-      const user = await authService.login({ email, password });
-      await userStorage.setUser(user);
+      const auth = await authService.login({ email, password });
+      await userStorage.setUser(auth.user);
+      await userStorage.setToken(auth.token);
       navigation.replace('Main');
     } catch (error: any) {
       console.error('Login failed:', error);

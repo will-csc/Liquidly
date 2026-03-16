@@ -36,6 +36,14 @@ const getResponseMessage = (data: unknown): string | null => {
   return typeof message === 'string' ? message : null;
 };
 
+const getStoredToken = (): string => {
+  try {
+    return localStorage.getItem('token') || '';
+  } catch {
+    return '';
+  }
+};
+
 const logApiError = (label: string, error: AxiosError) => {
   const config = error.config;
   const method = typeof config?.method === 'string' ? config.method.toUpperCase() : undefined;
@@ -70,6 +78,15 @@ api.interceptors.request.use(
     // If fallback is active, force the new URL
     if (config.baseURL !== currentBaseUrl) {
       config.baseURL = currentBaseUrl;
+    }
+    const token = getStoredToken();
+    if (token) {
+      const h = config.headers as unknown as { set?: (k: string, v: string) => void; [k: string]: unknown };
+      if (typeof h?.set === 'function') {
+        h.set('Authorization', `Bearer ${token}`);
+      } else {
+        h.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -144,12 +161,12 @@ export const getCurrentBaseUrl = () => currentBaseUrl;
 // --- API Services ---
 
 export const authService = {
-  login: async (data: LoginRequest): Promise<User> => {
-    const response = await api.post<User>('/api/users/login', data);
+  login: async (data: LoginRequest): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/api/users/login', data);
     return response.data;
   },
 
-  loginFace: async (data: FaceLoginRequest) => {
+  loginFace: async (data: FaceLoginRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>('/api/users/login-face', data);
     return response.data;
   },

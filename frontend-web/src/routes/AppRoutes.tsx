@@ -17,10 +17,18 @@ const hasValidSession = () => {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") return false;
-    const maybe = parsed as { email?: unknown; id?: unknown };
-    const hasEmail = typeof maybe.email === "string" && maybe.email.trim().length > 0;
-    const hasId = typeof maybe.id === "number" || typeof maybe.id === "string";
-    return hasEmail || hasId;
+    const maybe = parsed as { email?: unknown; id?: unknown; user?: unknown };
+    const rootEmail = typeof maybe.email === "string" && maybe.email.trim().length > 0;
+    const rootId = typeof maybe.id === "number" || typeof maybe.id === "string";
+    if (rootEmail || rootId) return true;
+
+    if (maybe.user && typeof maybe.user === "object") {
+      const nested = maybe.user as { email?: unknown; id?: unknown };
+      const hasEmail = typeof nested.email === "string" && nested.email.trim().length > 0;
+      const hasId = typeof nested.id === "number" || typeof nested.id === "string";
+      return hasEmail || hasId;
+    }
+    return false;
   } catch {
     return false;
   }

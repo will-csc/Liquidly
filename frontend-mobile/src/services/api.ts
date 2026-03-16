@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 import { Platform } from 'react-native';
 import { 
   User, 
+  AuthResponse,
   FaceLoginRequest,
   LoginRequest, 
   SignupRequest, 
@@ -11,6 +12,7 @@ import {
   Po, 
   Project 
 } from '../types';
+import { userStorage } from './userStorage';
 
 // URL Configuration
 // In Android emulator, localhost must be accessed via 10.0.2.2
@@ -39,6 +41,10 @@ api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (config.baseURL !== currentBaseUrl) {
       config.baseURL = currentBaseUrl;
+    }
+    const token = userStorage.getToken();
+    if (token) {
+      config.headers = { ...config.headers, Authorization: `Bearer ${token}` };
     }
     return config;
   },
@@ -108,13 +114,13 @@ export const getCurrentBaseUrl = () => currentBaseUrl;
 // --- API Services ---
 
 export const authService = {
-  login: async (data: LoginRequest): Promise<User> => {
-    const response = await api.post<User>('/api/users/login', data);
+  login: async (data: LoginRequest): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/api/users/login', data);
     return response.data;
   },
   
-  loginFace: async (data: FaceLoginRequest): Promise<User> => {
-    const response = await api.post<User>('/api/users/login-face', data);
+  loginFace: async (data: FaceLoginRequest): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/api/users/login-face', data);
     return response.data;
   },
   

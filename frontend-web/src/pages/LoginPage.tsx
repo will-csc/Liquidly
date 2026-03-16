@@ -94,9 +94,10 @@ const LoginPage: React.FC = () => {
         setLoading(true);
         
         try {
-          const user = await authService.loginFace({ faceImage: imageData });
-          console.log('Face Login successful:', user);
-          localStorage.setItem('user', JSON.stringify(user));
+          const auth = await authService.loginFace({ faceImage: imageData });
+          console.log('Face Login successful:', auth.user);
+          localStorage.setItem('user', JSON.stringify(auth.user));
+          localStorage.setItem('token', auth.token);
           handleNavigation('/dashboard');
         } catch (err: unknown) {
           console.error('Face Login failed:', err);
@@ -129,10 +130,10 @@ const LoginPage: React.FC = () => {
         password: formData.password
       };
       
-      const user = await authService.login(loginData);
-      console.log('Login successful:', user);
-      // Here you might want to store the user in context or local storage
-      localStorage.setItem('user', JSON.stringify(user));
+      const auth = await authService.login(loginData);
+      console.log('Login successful:', auth.user);
+      localStorage.setItem('user', JSON.stringify(auth.user));
+      localStorage.setItem('token', auth.token);
       handleNavigation('/dashboard');
     } catch (err: unknown) {
       console.error('Login failed:', err);

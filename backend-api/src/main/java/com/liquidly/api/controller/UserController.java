@@ -45,8 +45,15 @@ public class UserController {
     }
 
     @PostMapping("/login-face")
-    public ResponseEntity<UserDTO> loginFace(@RequestBody FaceLoginRequest request) {
-        return ResponseEntity.ok(userService.loginFace(request));
+    public ResponseEntity<?> loginFace(@RequestBody FaceLoginRequest request) {
+        UserDTO user = userService.loginFace(request);
+        String token = jwtService.generateToken(user.getEmail());
+        return ResponseEntity.ok(
+                Map.of(
+                        "token", token,
+                        "user", user
+                )
+        );
     }
 
     @PostMapping
