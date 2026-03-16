@@ -37,14 +37,17 @@ const getResponseMessage = (data: unknown): string | null => {
 };
 
 const getStoredToken = (): string => {
+  let v = '';
   try {
-    return localStorage.getItem('token') || '';
+    v = localStorage.getItem('token') || '';
   } catch {
-    try {
-      return sessionStorage.getItem('token') || '';
-    } catch {
-      return '';
-    }
+    v = '';
+  }
+  if (v.trim().length > 0) return v;
+  try {
+    return sessionStorage.getItem('token') || '';
+  } catch {
+    return '';
   }
 };
 

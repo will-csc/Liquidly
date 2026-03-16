@@ -13,27 +13,33 @@ import ProjectsPage from '../pages/ProjectsPage';
 
 const hasValidSession = () => {
   const token = (() => {
+    let v: string | null = null;
     try {
-      return localStorage.getItem("token");
+      v = localStorage.getItem("token");
     } catch {
-      try {
-        return sessionStorage.getItem("token");
-      } catch {
-        return null;
-      }
+      void 0;
+    }
+    if (v && v.trim().length > 0) return v;
+    try {
+      return sessionStorage.getItem("token");
+    } catch {
+      return null;
     }
   })();
   if (token && token.trim().length > 0) return true;
 
   const raw = (() => {
+    let v: string | null = null;
     try {
-      return localStorage.getItem("user");
+      v = localStorage.getItem("user");
     } catch {
-      try {
-        return sessionStorage.getItem("user");
-      } catch {
-        return null;
-      }
+      void 0;
+    }
+    if (v && v.trim().length > 0) return v;
+    try {
+      return sessionStorage.getItem("user");
+    } catch {
+      return null;
     }
   })();
   if (!raw) return false;

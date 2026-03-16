@@ -84,7 +84,7 @@ const LoginPage: React.FC = () => {
   const storeSession = (user: unknown, token: string) => {
     const tokenValue = token.trim();
     if (!tokenValue) return false;
-    const userValue = JSON.stringify(user);
+    const userValue = JSON.stringify(user ?? null);
     try {
       localStorage.setItem('user', userValue);
       localStorage.setItem('token', tokenValue);
