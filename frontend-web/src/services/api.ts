@@ -15,7 +15,8 @@ import type {
 } from '../types';
 
 // URL Configuration
-const PROD_URL = import.meta.env.VITE_API_URL_PROD || 'https://liquidly-backend.onrender.com';
+const IS_PROD_BUILD = import.meta.env.MODE === 'production';
+const PROD_URL = IS_PROD_BUILD ? '' : (import.meta.env.VITE_API_URL_PROD || 'https://liquidly-backend.onrender.com');
 const LOCAL_URL = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080';
 
 // Determine initial URL based on environment
@@ -91,6 +92,7 @@ api.interceptors.response.use(
     // Check if it's a network/connection error and retry hasn't been attempted yet
     // Only attempt failover if we are currently using PROD_URL
     if (
+      !IS_PROD_BUILD &&
       !isFallbackActive &&
       currentBaseUrl === PROD_URL &&
       originalRequest &&
