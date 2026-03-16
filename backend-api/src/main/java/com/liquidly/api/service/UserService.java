@@ -9,6 +9,8 @@ import com.liquidly.api.model.User;
 import com.liquidly.api.repository.CompanyRepository;
 import com.liquidly.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 @Service
 public class UserService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private static final SecureRandom secureRandom = new SecureRandom();
 
     @Autowired
@@ -86,6 +89,7 @@ public class UserService {
         }
 
         User savedUser = userRepository.save(user);
+        logger.info("Usuario criado: email={}, companyId={}", savedUser.getEmail(), savedUser.getCompany() == null ? null : savedUser.getCompany().getId());
         return mapToDTO(savedUser);
     }
 
@@ -97,6 +101,7 @@ public class UserService {
             throw new RuntimeException("The password is wrong");
         }
 
+        logger.info("Login sucesso: email={}", user.getEmail());
         return mapToDTO(user);
     }
 

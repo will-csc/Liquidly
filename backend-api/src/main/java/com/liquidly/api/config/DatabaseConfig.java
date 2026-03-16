@@ -61,7 +61,7 @@ public class DatabaseConfig {
     public DataSource dataSource() {
         logger.info("Initializing Database Connection Strategy...");
 
-        logger.info("Step 1: Checking Primary Database (Supabase)...");
+        logger.info("Step 1: Checking Primary Database (NEON/Env)...");
         String resolvedPrimaryUrl = primaryUrl;
         String resolvedPrimaryUsername = primaryUsername;
         String resolvedPrimaryPassword = primaryPassword;
@@ -86,7 +86,7 @@ public class DatabaseConfig {
             }
         }
 
-        DataSource primary = createDataSource("Primary (Supabase)", resolvedPrimaryUrl, resolvedPrimaryUsername, resolvedPrimaryPassword);
+        DataSource primary = createDataSource("Primary (NEON/Env)", resolvedPrimaryUrl, resolvedPrimaryUsername, resolvedPrimaryPassword);
         if (primary != null) {
             logger.info(">>> CONNECTED to PRIMARY database.");
             return primary;
@@ -104,6 +104,7 @@ public class DatabaseConfig {
         logger.error(">>> Backup database UNAVAILABLE.");
 
         logger.warn("Step 3: All external databases failed. Falling back to local H2 in-memory database.");
+        logger.warn(">>> FALLBACK H2 ACTIVE: data will NOT persist across restarts.");
         return DataSourceBuilder.create()
                 .driverClassName("org.h2.Driver")
                 .url("jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
@@ -135,11 +136,12 @@ public class DatabaseConfig {
             return null;
         }
 
-        logger.info("Attempting to connect to {} database: {}", name, sanitizeJdbcUrlForLog(resolvedUrl));
+        String jdbcUrlForConnection = stripUserInfoFromJdbcUrl(resolvedUrl);
+        logger.info("Attempting to connect to {} database: {}", name, sanitizeJdbcUrlForLog(jdbcUrlForConnection));
         try {
             DataSource ds = DataSourceBuilder.create()
                     .driverClassName("org.postgresql.Driver")
-                    .url(resolvedUrl)
+                    .url(jdbcUrlForConnection)
                     .username(resolvedUsername)
                     .password(resolvedPassword)
                     .build();
@@ -157,24 +159,66 @@ public class DatabaseConfig {
     private Map<String, String> extractCredentialsFromJdbcUrl(String jdbcUrl) {
         Map<String, String> out = new HashMap<>();
         if (isBlank(jdbcUrl)) return out;
-        int q = jdbcUrl.indexOf('?');
-        if (q < 0 || q == jdbcUrl.length() - 1) return out;
 
-        String query = jdbcUrl.substring(q + 1);
+        String value = jdbcUrl.trim();
+        String uriValue = value.startsWith("jdbc:") ? value.substring(5) : value;
+
+        try {
+            URI uri = URI.create(uriValue);
+            String userInfo = uri.getUserInfo();
+            if (!isBlank(userInfo)) {
+                int colon = userInfo.indexOf(':');
+                if (colon > 0) {
+                    String user = userInfo.substring(0, colon).trim();
+                    String pass = userInfo.substring(colon + 1).trim();
+                    if (!isBlank(user)) out.putIfAbsent("user", user);
+                    if (!isBlank(pass)) out.putIfAbsent("password", pass);
+                } else if (!isBlank(userInfo)) {
+                    out.putIfAbsent("user", userInfo.trim());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        int q = value.indexOf('?');
+        if (q < 0 || q == value.length() - 1) return out;
+
+        String query = value.substring(q + 1);
         for (String pair : query.split("&")) {
             if (pair.isBlank()) continue;
             int eq = pair.indexOf('=');
             if (eq <= 0 || eq == pair.length() - 1) continue;
             String key = pair.substring(0, eq).trim();
-            String value = pair.substring(eq + 1).trim();
-            if (key.isBlank() || value.isBlank()) continue;
+            String v = pair.substring(eq + 1).trim();
+            if (key.isBlank() || v.isBlank()) continue;
             if (key.equals("user") || key.equals("username")) {
-                out.put("user", value);
+                out.put("user", v);
             } else if (key.equals("password")) {
-                out.put("password", value);
+                out.put("password", v);
             }
         }
         return out;
+    }
+
+    private String stripUserInfoFromJdbcUrl(String jdbcUrl) {
+        if (isBlank(jdbcUrl)) return "";
+        String value = jdbcUrl.trim();
+        String uriValue = value.startsWith("jdbc:") ? value.substring(5) : value;
+        try {
+            URI uri = URI.create(uriValue);
+            if (isBlank(uri.getUserInfo())) return value;
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            int port = uri.getPort();
+            String path = uri.getRawPath();
+            String query = uri.getRawQuery();
+            if (isBlank(scheme) || isBlank(host)) return value;
+
+            String rebuilt = scheme + "://" + host + (port == -1 ? "" : ":" + port) + (path == null ? "" : path) + (query == null ? "" : "?" + query);
+            return value.startsWith("jdbc:") ? ("jdbc:" + rebuilt) : rebuilt;
+        } catch (Exception e) {
+            return value;
+        }
     }
 
     private String firstNonBlank(String... values) {
@@ -195,10 +239,11 @@ public class DatabaseConfig {
 
     private String sanitizeJdbcUrlForLog(String jdbcUrl) {
         if (isBlank(jdbcUrl)) return "";
-        int q = jdbcUrl.indexOf('?');
+        String value = stripUserInfoFromJdbcUrl(jdbcUrl);
+        int q = value.indexOf('?');
         if (q < 0) return jdbcUrl;
-        String base = jdbcUrl.substring(0, q);
-        String query = jdbcUrl.substring(q + 1);
+        String base = value.substring(0, q);
+        String query = value.substring(q + 1);
         StringBuilder out = new StringBuilder(base).append('?');
 
         boolean first = true;
