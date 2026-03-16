@@ -16,7 +16,7 @@ import type {
 
 // URL Configuration
 const IS_PROD_BUILD = import.meta.env.MODE === 'production';
-const PROD_URL = IS_PROD_BUILD ? '' : (import.meta.env.VITE_API_URL_PROD || 'https://liquidly-backend.onrender.com');
+const PROD_URL = import.meta.env.VITE_API_URL_PROD || 'https://liquidly-backend.onrender.com';
 const LOCAL_URL = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080';
 
 // Determine initial URL based on environment
