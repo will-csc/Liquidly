@@ -322,29 +322,45 @@ public class DatabaseConfig {
     }
 
     private String buildSupabaseJdbcUrl(String supabaseUrl, String databaseName) {
+        if (isBlank(supabaseUrl)) return "";
+        String raw = supabaseUrl.trim();
+        String host = "";
         try {
-            URI uri = URI.create(supabaseUrl.trim());
-            String host = uri.getHost();
-            if (isBlank(host)) {
-                return "";
-            }
+            URI uri = URI.create(raw.contains("://") ? raw : ("https://" + raw));
+            host = uri.getHost();
+        } catch (Exception ignored) {
+        }
 
-            int firstDot = host.indexOf('.');
-            if (firstDot <= 0) {
-                return "";
-            }
+        if (isBlank(host)) {
+            host = raw;
+            int slash = host.indexOf('/');
+            if (slash > 0) host = host.substring(0, slash);
+            int q = host.indexOf('?');
+            if (q > 0) host = host.substring(0, q);
+        }
 
-            String projectRef = host.substring(0, firstDot);
-            if (isBlank(projectRef)) {
-                return "";
-            }
+        if (isBlank(host)) {
+            return "";
+        }
 
-            String dbName = isBlank(databaseName) ? "postgres" : databaseName.trim();
-            return "jdbc:postgresql://db." + projectRef + ".supabase.co:5432/" + dbName + "?sslmode=require";
-        } catch (Exception e) {
+        String projectRef = "";
+        String lowerHost = host.toLowerCase();
+        if (lowerHost.startsWith("db.")) {
+            String rest = host.substring(3);
+            int dot = rest.indexOf('.');
+            projectRef = dot > 0 ? rest.substring(0, dot) : rest;
+        } else {
+            int dot = host.indexOf('.');
+            projectRef = dot > 0 ? host.substring(0, dot) : host;
+        }
+
+        if (isBlank(projectRef)) {
             logger.warn("Invalid SUPABASE_URL format. Skipping Supabase auto-configuration.");
             return "";
         }
+
+        String dbName = isBlank(databaseName) ? "postgres" : databaseName.trim();
+        return "jdbc:postgresql://db." + projectRef + ".supabase.co:5432/" + dbName + "?sslmode=require";
     }
 
     private boolean isBlank(String value) {

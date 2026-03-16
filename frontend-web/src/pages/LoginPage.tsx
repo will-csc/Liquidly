@@ -97,11 +97,13 @@ const LoginPage: React.FC = () => {
           const auth = await authService.loginFace({ faceImage: imageData });
           console.log('Face Login successful:', auth.user);
           localStorage.setItem('user', JSON.stringify(auth.user));
-          if (typeof auth.token === "string" && auth.token.trim().length > 0) {
-            localStorage.setItem('token', auth.token);
-          } else {
+          const token = typeof auth.token === "string" ? auth.token.trim() : "";
+          if (!token) {
             localStorage.removeItem('token');
+            setError("Resposta inválida do login (token ausente).");
+            return;
           }
+          localStorage.setItem('token', token);
           navigate('/dashboard', { replace: true });
         } catch (err: unknown) {
           console.error('Face Login failed:', err);
@@ -137,11 +139,13 @@ const LoginPage: React.FC = () => {
       const auth = await authService.login(loginData);
       console.log('Login successful:', auth.user);
       localStorage.setItem('user', JSON.stringify(auth.user));
-      if (typeof auth.token === "string" && auth.token.trim().length > 0) {
-        localStorage.setItem('token', auth.token);
-      } else {
+      const token = typeof auth.token === "string" ? auth.token.trim() : "";
+      if (!token) {
         localStorage.removeItem('token');
+        setError("Resposta inválida do login (token ausente).");
+        return;
       }
+      localStorage.setItem('token', token);
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       console.error('Login failed:', err);
