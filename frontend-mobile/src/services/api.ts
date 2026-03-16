@@ -15,7 +15,7 @@ import {
 // URL Configuration
 // In Android emulator, localhost must be accessed via 10.0.2.2
 // In iOS and Web, localhost is localhost or 127.0.0.1
-const PROD_URL = 'https://backend-api.onrender.com';
+const PROD_URL = 'https://liquidly-backend.onrender.com';
 const LOCAL_URL = Platform.OS === 'android' 
   ? 'http://10.0.2.2:8080' 
   : 'http://localhost:8080';
