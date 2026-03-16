@@ -4,6 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,9 +13,12 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
         Map<String, String> response = new HashMap<>();
+        logger.error("RuntimeException", ex);
         
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         String msg = ex.getMessage() == null ? "" : ex.getMessage();
@@ -46,6 +51,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception ex) {
         Map<String, String> response = new HashMap<>();
+        logger.error("Exception", ex);
         response.put("message", "We are having communications problems, please wait some minutes. If the problem persists, send a email to liquidly@gmail.com");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
