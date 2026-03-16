@@ -97,8 +97,12 @@ const LoginPage: React.FC = () => {
           const auth = await authService.loginFace({ faceImage: imageData });
           console.log('Face Login successful:', auth.user);
           localStorage.setItem('user', JSON.stringify(auth.user));
-          localStorage.setItem('token', auth.token);
-          handleNavigation('/dashboard');
+          if (typeof auth.token === "string" && auth.token.trim().length > 0) {
+            localStorage.setItem('token', auth.token);
+          } else {
+            localStorage.removeItem('token');
+          }
+          navigate('/dashboard', { replace: true });
         } catch (err: unknown) {
           console.error('Face Login failed:', err);
           const maybeMessage = (() => {
@@ -133,8 +137,12 @@ const LoginPage: React.FC = () => {
       const auth = await authService.login(loginData);
       console.log('Login successful:', auth.user);
       localStorage.setItem('user', JSON.stringify(auth.user));
-      localStorage.setItem('token', auth.token);
-      handleNavigation('/dashboard');
+      if (typeof auth.token === "string" && auth.token.trim().length > 0) {
+        localStorage.setItem('token', auth.token);
+      } else {
+        localStorage.removeItem('token');
+      }
+      navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       console.error('Login failed:', err);
       // Tenta pegar a mensagem de erro da resposta do servidor (JSON), ou erro genérico de rede

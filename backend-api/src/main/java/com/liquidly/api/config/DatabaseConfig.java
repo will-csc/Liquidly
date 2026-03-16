@@ -128,7 +128,8 @@ public class DatabaseConfig {
                 DatabaseMetaData meta = connection.getMetaData();
                 String product = meta == null ? "" : meta.getDatabaseProductName();
                 String url = meta == null ? "" : meta.getURL();
-                logger.info("Conexão bem feita no banco de dados (produto={}, url={})", product, sanitizeJdbcUrlForLog(url));
+                logger.info("conexão bem feita no banco de dados");
+                logger.info("Banco conectado (produto={}, url={})", product, sanitizeJdbcUrlForLog(url));
 
                 String email = "teste@liquidly.com";
                 if (userRepository.existsByEmail(email)) {
