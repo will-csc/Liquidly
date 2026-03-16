@@ -28,6 +28,31 @@ let isFallbackActive = false;
 
 console.log(`[API Config] Initializing API with URL: ${currentBaseUrl} (Mode: ${import.meta.env.MODE})`);
 
+const getResponseMessage = (data: unknown): string | null => {
+  if (typeof data !== 'object' || data === null) return null;
+  if (!('message' in data)) return null;
+  const message = (data as { message?: unknown }).message;
+  return typeof message === 'string' ? message : null;
+};
+
+const logApiError = (label: string, error: AxiosError) => {
+  const config = error.config;
+  const method = typeof config?.method === 'string' ? config.method.toUpperCase() : undefined;
+  const url = config?.url;
+  const baseURL = config?.baseURL || currentBaseUrl;
+  const status = error.response?.status;
+  const responseMessage = getResponseMessage(error.response?.data);
+
+  console.error(label, {
+    baseURL,
+    method,
+    url,
+    status,
+    code: error.code,
+    message: responseMessage || error.message,
+  });
+};
+
 // Create Axios Instance
 const api: AxiosInstance = axios.create({
   baseURL: currentBaseUrl,
@@ -72,6 +97,7 @@ api.interceptors.response.use(
       !originalRequest._retry &&
       (error.code === 'ECONNABORTED' || error.message.includes('Network Error') || !error.response)
     ) {
+      logApiError('[API Error] Production request failed (will try local fallback)', error);
       console.warn(`[API Failover] Failed to connect to ${PROD_URL}. Attempting to connect to local server (Backup)...`);
       
       // Mark request to prevent infinite loop
@@ -97,6 +123,7 @@ api.interceptors.response.use(
       }
     }
 
+    logApiError('[API Error]', error);
     return Promise.reject(error);
   }
 );
