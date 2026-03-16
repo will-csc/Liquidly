@@ -12,10 +12,30 @@ import ConversionsPage from '../pages/ConversionsPage';
 import ProjectsPage from '../pages/ProjectsPage';
 
 const hasValidSession = () => {
-  const token = localStorage.getItem("token");
+  const token = (() => {
+    try {
+      return localStorage.getItem("token");
+    } catch {
+      try {
+        return sessionStorage.getItem("token");
+      } catch {
+        return null;
+      }
+    }
+  })();
   if (token && token.trim().length > 0) return true;
 
-  const raw = localStorage.getItem("user");
+  const raw = (() => {
+    try {
+      return localStorage.getItem("user");
+    } catch {
+      try {
+        return sessionStorage.getItem("user");
+      } catch {
+        return null;
+      }
+    }
+  })();
   if (!raw) return false;
   try {
     const parsed = JSON.parse(raw) as unknown;

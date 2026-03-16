@@ -81,6 +81,25 @@ const LoginPage: React.FC = () => {
     setIsCameraOpen(false);
   };
 
+  const storeSession = (user: unknown, token: string) => {
+    const tokenValue = token.trim();
+    if (!tokenValue) return false;
+    const userValue = JSON.stringify(user);
+    try {
+      localStorage.setItem('user', userValue);
+      localStorage.setItem('token', tokenValue);
+      return true;
+    } catch {
+      try {
+        sessionStorage.setItem('user', userValue);
+        sessionStorage.setItem('token', tokenValue);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  };
+
   const captureAndLogin = async () => {
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
@@ -96,14 +115,16 @@ const LoginPage: React.FC = () => {
         try {
           const auth = await authService.loginFace({ faceImage: imageData });
           console.log('Face Login successful:', auth.user);
-          localStorage.setItem('user', JSON.stringify(auth.user));
           const token = typeof auth.token === "string" ? auth.token.trim() : "";
           if (!token) {
-            localStorage.removeItem('token');
             setError("Resposta inválida do login (token ausente).");
             return;
           }
-          localStorage.setItem('token', token);
+          const ok = storeSession(auth.user, token);
+          if (!ok) {
+            setError("Não foi possível salvar a sessão (storage bloqueado). Tente outro navegador ou desative modo privado.");
+            return;
+          }
           navigate('/dashboard', { replace: true });
         } catch (err: unknown) {
           console.error('Face Login failed:', err);
@@ -138,14 +159,16 @@ const LoginPage: React.FC = () => {
       
       const auth = await authService.login(loginData);
       console.log('Login successful:', auth.user);
-      localStorage.setItem('user', JSON.stringify(auth.user));
       const token = typeof auth.token === "string" ? auth.token.trim() : "";
       if (!token) {
-        localStorage.removeItem('token');
         setError("Resposta inválida do login (token ausente).");
         return;
       }
-      localStorage.setItem('token', token);
+      const ok = storeSession(auth.user, token);
+      if (!ok) {
+        setError("Não foi possível salvar a sessão (storage bloqueado). Tente outro navegador ou desative modo privado.");
+        return;
+      }
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       console.error('Login failed:', err);

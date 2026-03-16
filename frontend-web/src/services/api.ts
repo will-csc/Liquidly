@@ -40,7 +40,11 @@ const getStoredToken = (): string => {
   try {
     return localStorage.getItem('token') || '';
   } catch {
-    return '';
+    try {
+      return sessionStorage.getItem('token') || '';
+    } catch {
+      return '';
+    }
   }
 };
 
