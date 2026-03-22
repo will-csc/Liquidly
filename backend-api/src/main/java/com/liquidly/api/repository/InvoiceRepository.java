@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
+// Data access layer for invoice entities.
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByProject(Project project);
     List<Invoice> findByProjectId(Long projectId);

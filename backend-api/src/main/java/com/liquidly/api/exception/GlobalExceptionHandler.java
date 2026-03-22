@@ -15,6 +15,7 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    // Resolve the root cause message so logs contain the most relevant error.
     private String getRootCauseMessage(Throwable t) {
         Throwable cur = t;
         while (cur.getCause() != null && cur.getCause() != cur) {
@@ -26,6 +27,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RuntimeException.class)
+    // Convert runtime errors into a consistent JSON response and map known messages to HTTP status codes.
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
         Map<String, String> response = new HashMap<>();
         logger.error("Request failed: {}", getRootCauseMessage(ex));
@@ -59,6 +61,7 @@ public class GlobalExceptionHandler {
     }
     
     @ExceptionHandler(Exception.class)
+    // Fallback handler for unexpected checked exceptions.
     public ResponseEntity<Map<String, String>> handleException(Exception ex) {
         Map<String, String> response = new HashMap<>();
         logger.error("Request failed: {}", getRootCauseMessage(ex));

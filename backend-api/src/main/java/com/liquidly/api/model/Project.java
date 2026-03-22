@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+// JPA entity representing a project that belongs to a company.
 @Entity
 @Table(name = "projects")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
@@ -31,6 +32,7 @@ public class Project {
     private LocalDateTime createdAt;
 
     @PrePersist
+    // Set the creation timestamp automatically when the record is first persisted.
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }

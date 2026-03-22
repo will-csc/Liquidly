@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+// JPA entity representing a purchase order (PO) line used as supply for liquidation.
 @Entity
 @Table(name = "pos")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
@@ -41,6 +42,7 @@ public class Po {
     private LocalDateTime createdAt;
 
     @PrePersist
+    // Set the creation timestamp automatically when the record is first persisted.
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }

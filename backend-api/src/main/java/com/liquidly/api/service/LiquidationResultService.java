@@ -60,31 +60,38 @@ public class LiquidationResultService {
     @Value("${email.service.apiKey:}")
     private String emailServiceApiKey;
 
+    // Persist a liquidation result record.
     public LiquidationResult createLiquidationResult(LiquidationResult result) {
         return liquidationResultRepository.save(result);
     }
 
+    // Return all liquidation results.
     public List<LiquidationResult> getAllLiquidationResults() {
         return liquidationResultRepository.findAll();
     }
 
+    // Return liquidation results filtered by company id.
     public List<LiquidationResult> getLiquidationResultsByCompanyId(Long companyId) {
         return liquidationResultRepository.findByCompanyId(companyId);
     }
 
+    // Return liquidation results filtered by project id.
     public List<LiquidationResult> getLiquidationResultsByProjectId(Long projectId) {
         return liquidationResultRepository.findByProjectId(projectId);
     }
 
+    // Return a liquidation result by id.
     public LiquidationResult getLiquidationResultById(Long id) {
         return liquidationResultRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Liquidation Result not found with id: " + id));
     }
 
+    // Delete a liquidation result by id.
     public void deleteLiquidationResult(Long id) {
         liquidationResultRepository.deleteById(id);
     }
 
+    // Send an email report for a company/project, optionally filtered by BOM and date range.
     public void sendReportEmail(
             Long companyId,
             Long projectId,
@@ -100,6 +107,7 @@ public class LiquidationResultService {
             throw new RuntimeException("Email is required");
         }
 
+        // Validate and serialize optional BOM filter.
         String bomIdJson = "null";
         if (selectedBom != null && !selectedBom.trim().isEmpty() && !"all".equalsIgnoreCase(selectedBom.trim())) {
             String raw = selectedBom.trim();
@@ -108,6 +116,7 @@ public class LiquidationResultService {
             }
         }
 
+        // Serialize optional date filters to JSON values.
         String startJson = (startDate == null || startDate.trim().isEmpty()) ? "null" : "\"" + escapeJson(startDate.trim()) + "\"";
         String endJson = (endDate == null || endDate.trim().isEmpty()) ? "null" : "\"" + escapeJson(endDate.trim()) + "\"";
 
@@ -133,6 +142,7 @@ public class LiquidationResultService {
             }
         }
 
+        // Attempt sending through the primary email service and fall back to backup URLs if needed.
         RuntimeException lastError = null;
         for (String serviceUrl : serviceUrls) {
             String endpoint = serviceUrl.endsWith("/")
@@ -174,6 +184,7 @@ public class LiquidationResultService {
     }
 
     @Transactional
+    // Run liquidation for a company/project by consuming invoices and POs against BOM requirements.
     public List<LiquidationResult> runLiquidation(Long companyId, Long projectId) {
         if (companyId == null || projectId == null) {
             throw new RuntimeException("companyId and projectId are required");
@@ -182,8 +193,10 @@ public class LiquidationResultService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found with id: " + projectId));
 
+        // Clear previous results for the same company/project to keep the run idempotent.
         liquidationResultRepository.deleteByCompanyIdAndProjectId(companyId, projectId);
 
+        // Load input data for the liquidation run.
         List<Bom> boms = bomRepository.findByCompanyIdAndProjectId(companyId, projectId);
         List<Invoice> invoices = invoiceRepository.findByCompanyIdAndProjectId(companyId, projectId);
 
@@ -196,6 +209,7 @@ public class LiquidationResultService {
                 ? List.of()
                 : poRepository.findByCompanyIdAndInvoiceNumberIn(companyId, invoiceNumbers);
 
+        // Initialize remaining quantities if missing.
         for (Bom b : boms) {
             if (isNullOrZero(b.getRemainingQntd())) b.setRemainingQntd(nz(b.getQntd()));
         }
@@ -206,6 +220,7 @@ public class LiquidationResultService {
             if (isNullOrZero(p.getRemainingQntd())) p.setRemainingQntd(nz(p.getQntdInvoice()));
         }
 
+        // Sort invoices and POs for deterministic consumption order (by createdAt then id).
         invoices.sort((a, b) -> {
             if (a.getCreatedAt() == null && b.getCreatedAt() != null) return 1;
             if (a.getCreatedAt() != null && b.getCreatedAt() == null) return -1;
@@ -229,6 +244,7 @@ public class LiquidationResultService {
         List<LiquidationResult> results = new ArrayList<>();
         String fallbackProjectName = project.getName() == null ? "" : project.getName();
 
+        // Main liquidation loop: consume invoice quantities first, then PO quantities, updating remaining balances.
         for (Bom bom : boms) {
             BigDecimal bomRemaining = nz(bom.getRemainingQntd());
             if (bomRemaining.signum() <= 0) continue;
@@ -237,6 +253,7 @@ public class LiquidationResultService {
                 BigDecimal invRemaining = nz(inv.getRemainingQntd());
                 if (invRemaining.signum() <= 0) continue;
 
+                // Convert invoice UM -> BOM UM using the latest conversion factor for the item.
                 BigDecimal factor = getFactor(companyId, bom.getItemCode(), inv.getUmInvoice(), bom.getUmBom());
                 if (factor == null || factor.signum() == 0) {
                     results.add(buildResult(companyId, projectId, fallbackProjectName, bom, bomRemaining, inv, invRemaining, BigDecimal.ZERO, BigDecimal.ZERO, null, BigDecimal.ZERO, BigDecimal.ZERO));
@@ -267,6 +284,7 @@ public class LiquidationResultService {
                 BigDecimal poRemaining = nz(po.getRemainingQntd());
                 if (poRemaining.signum() <= 0) continue;
 
+                // Convert PO UM -> BOM UM using the latest conversion factor for the item.
                 BigDecimal factor = getFactor(companyId, bom.getItemCode(), po.getUmPo(), bom.getUmBom());
                 if (factor == null || factor.signum() == 0) {
                     results.add(buildResult(companyId, projectId, fallbackProjectName, bom, bomRemaining, null, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, po, poRemaining, BigDecimal.ZERO));
@@ -292,6 +310,7 @@ public class LiquidationResultService {
             }
         }
 
+        // Persist remaining quantities back into source tables and store the generated results.
         bomRepository.saveAll(boms);
         invoiceRepository.saveAll(invoices);
         if (!pos.isEmpty()) poRepository.saveAll(pos);
@@ -299,6 +318,7 @@ public class LiquidationResultService {
         return liquidationResultRepository.saveAll(results);
     }
 
+    // Resolve the latest unit conversion factor for an item within a company.
     private BigDecimal getFactor(Long companyId, String itemCode, String fromUm, String toUm) {
         if (fromUm == null || toUm == null) return null;
         if (normalize(fromUm).equals(normalize(toUm))) return BigDecimal.ONE;
@@ -315,6 +335,7 @@ public class LiquidationResultService {
                 .orElse(null);
     }
 
+    // Extract a conversion factor from a conversion record (explicit factor or derived from quantities).
     private BigDecimal extractFactor(Conversion c) {
         if (c.getConversionFactor() != null) return c.getConversionFactor();
         BigDecimal invoice = nz(c.getQntdInvoice());
@@ -322,6 +343,7 @@ public class LiquidationResultService {
         return nz(c.getQntdBom()).divide(invoice, 12, RoundingMode.HALF_UP);
     }
 
+    // Build a result row for the liquidation report, linking company/project and optional invoice/PO references.
     private LiquidationResult buildResult(
             Long companyId,
             Long projectId,

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+// JPA entity representing an application user account.
 @Entity
 @Table(name = "users")
 @Data

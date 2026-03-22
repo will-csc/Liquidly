@@ -9,15 +9,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Optional;
-
 @Configuration
 public class DataSeeder {
 
     @Bean
     public CommandLineRunner initData(UserRepository userRepository, CompanyRepository companyRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            // 1. Create Default Company if not exists
+            // Seed demo data at startup (a default company and a couple of default users).
+
+            // Create a default company if it does not exist.
             String companyName = "Liquidly Demo Corp";
             Company company = companyRepository.findByCompanyName(companyName)
                     .orElseGet(() -> {
@@ -26,7 +26,7 @@ public class DataSeeder {
                         return companyRepository.save(newCompany);
                     });
 
-            // 2. Create Default User if not exists
+            // Create a default admin user if it does not exist.
             String userEmail = "admin@liquidly.com";
             if (userRepository.findByEmail(userEmail).isEmpty()) {
                 User user = new User();
@@ -38,7 +38,7 @@ public class DataSeeder {
                 System.out.println(">>> Default User Created: " + userEmail + " / admin123");
             }
             
-            // 3. Create another test user
+            // Create an additional test user if it does not exist.
             String testEmail = "user@liquidly.com";
             if (userRepository.findByEmail(testEmail).isEmpty()) {
                 User user = new User();

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
+// Data access layer for Project entities.
 public interface ProjectRepository extends JpaRepository<Project, Long> {
     List<Project> findByCompany(Company company);
     List<Project> findByCompanyId(Long companyId);

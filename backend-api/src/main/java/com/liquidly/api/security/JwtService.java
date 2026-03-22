@@ -11,9 +11,11 @@ import java.util.Date;
 @Service
 public class JwtService {
 
+    // Secret key used to sign and validate JWT tokens.
     private final SecretKey SECRET_KEY =
             Keys.hmacShaKeyFor("liquidly-secret-key-liquidly-secret-key".getBytes());
 
+    // Generate a signed JWT token for the given email subject.
     public String generateToken(String email) {
 
         return Jwts.builder()
@@ -23,9 +25,13 @@ public class JwtService {
                 .signWith(SECRET_KEY)
                 .compact();
     }
+
+    // Return the signing key (used by filters and validators).
     public SecretKey getSecretKey() {
         return SECRET_KEY;
     }
+
+    // Extract the email (subject) from a valid token.
     public String extractEmail(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(SECRET_KEY)
@@ -35,6 +41,7 @@ public class JwtService {
                 .getSubject();
     }
 
+    // Validate token signature and expiration.
     public boolean isTokenValid(String token) {
         try {
             Jwts.parserBuilder()

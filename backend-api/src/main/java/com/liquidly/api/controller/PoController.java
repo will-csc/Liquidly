@@ -16,31 +16,37 @@ public class PoController {
     @Autowired
     private PoService poService;
 
+    // Create a purchase order (PO) record.
     @PostMapping
     public ResponseEntity<Po> createPo(@RequestBody Po po) {
         return ResponseEntity.ok(poService.createPo(po));
     }
 
+    // Return all PO records.
     @GetMapping
     public ResponseEntity<List<Po>> getAllPos() {
         return ResponseEntity.ok(poService.getAllPos());
     }
 
+    // Return PO records filtered by company id.
     @GetMapping("/company/{companyId}")
     public ResponseEntity<List<Po>> getPosByCompanyId(@PathVariable Long companyId) {
         return ResponseEntity.ok(poService.getPosByCompanyId(companyId));
     }
 
+    // Return PO records filtered by invoice number.
     @GetMapping("/invoice/{invoiceNumber}")
     public ResponseEntity<List<Po>> getPosByInvoiceNumber(@PathVariable String invoiceNumber) {
         return ResponseEntity.ok(poService.getPosByInvoiceNumber(invoiceNumber));
     }
 
+    // Return a PO record by id.
     @GetMapping("/{id}")
     public ResponseEntity<Po> getPoById(@PathVariable Long id) {
         return ResponseEntity.ok(poService.getPoById(id));
     }
 
+    // Delete a PO record by id.
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePo(@PathVariable Long id) {
         poService.deletePo(id);

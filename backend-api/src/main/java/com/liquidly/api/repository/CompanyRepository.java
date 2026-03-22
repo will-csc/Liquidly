@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
+// Data access layer for Company entities.
 public interface CompanyRepository extends JpaRepository<Company, Long> {
     Optional<Company> findByCompanyName(String companyName);
 }

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+// JPA entity representing a company (tenant) in the system.
 @Entity
 @Table(name = "companies")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

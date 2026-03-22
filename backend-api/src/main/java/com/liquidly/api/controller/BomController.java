@@ -16,31 +16,37 @@ public class BomController {
     @Autowired
     private BomService bomService;
 
+    // Create a BOM entry.
     @PostMapping
     public ResponseEntity<Bom> createBom(@RequestBody Bom bom) {
         return ResponseEntity.ok(bomService.createBom(bom));
     }
 
+    // Return all BOM entries.
     @GetMapping
     public ResponseEntity<List<Bom>> getAllBoms() {
         return ResponseEntity.ok(bomService.getAllBoms());
     }
 
+    // Return BOM entries filtered by company id.
     @GetMapping("/company/{companyId}")
     public ResponseEntity<List<Bom>> getBomsByCompanyId(@PathVariable Long companyId) {
         return ResponseEntity.ok(bomService.getBomsByCompanyId(companyId));
     }
 
+    // Return BOM entries filtered by project id.
     @GetMapping("/project/{projectId}")
     public ResponseEntity<List<Bom>> getBomsByProjectId(@PathVariable Long projectId) {
         return ResponseEntity.ok(bomService.getBomsByProjectId(projectId));
     }
 
+    // Return a BOM entry by id.
     @GetMapping("/{id}")
     public ResponseEntity<Bom> getBomById(@PathVariable Long id) {
         return ResponseEntity.ok(bomService.getBomById(id));
     }
 
+    // Delete a BOM entry by id.
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBom(@PathVariable Long id) {
         bomService.deleteBom(id);

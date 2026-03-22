@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+// JPA entity representing a unit conversion definition for a given item within a company.
 @Entity
 @Table(name = "conversions")
 @Data
@@ -45,6 +46,7 @@ public class Conversion {
     private LocalDateTime createdAt;
 
     @PrePersist
+    // Set the creation timestamp automatically when the record is first persisted.
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }

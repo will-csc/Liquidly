@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+// JPA entity representing an invoice line used as supply for liquidation.
 @Entity
 @Table(name = "invoices")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
@@ -45,6 +46,7 @@ public class Invoice {
     private LocalDateTime createdAt;
 
     @PrePersist
+    // Set the creation timestamp automatically when the record is first persisted.
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }

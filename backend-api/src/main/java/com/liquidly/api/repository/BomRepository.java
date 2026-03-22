@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
+// Data access layer for BOM entities.
 public interface BomRepository extends JpaRepository<Bom, Long> {
     List<Bom> findByProject(Project project);
     List<Bom> findByProjectId(Long projectId);

@@ -68,13 +68,16 @@ public class DatabaseConfig {
 
     @Bean
     public DataSource dataSource() {
+        // Choose the first available database (Primary -> Backup -> H2 in-memory fallback).
         logger.info("Initializing Database Connection Strategy...");
 
+        // Resolve primary database connection details (configured properties, env vars, and optional Supabase auto-config).
         logger.info("Step 1: Checking Primary Database (NEON/Env)...");
         String resolvedPrimaryUrl = primaryUrl;
         String resolvedPrimaryUsername = primaryUsername;
         String resolvedPrimaryPassword = primaryPassword;
 
+        // If no explicit primary URL is configured, try standard environment variables and normalize to a JDBC URL.
         if (isBlank(resolvedPrimaryUrl)) {
             resolvedPrimaryUrl = firstNonBlank(jdbcDatabaseUrl, databaseUrl);
             if (!isBlank(resolvedPrimaryUrl)) {
@@ -82,6 +85,7 @@ public class DatabaseConfig {
             }
         }
 
+        // If still missing, derive a JDBC URL from NEON settings and fallback to NEON credentials.
         if (isBlank(resolvedPrimaryUrl) && !isBlank(supabaseUrl)) {
             resolvedPrimaryUrl = buildSupabaseJdbcUrl(supabaseUrl, supabaseDbDatabase);
             if (isBlank(resolvedPrimaryUsername)) {
@@ -95,6 +99,7 @@ public class DatabaseConfig {
             }
         }
 
+        // Attempt primary connection; if successful, return immediately.
         DataSource primary = createDataSource("Primary (NEON/Env)", resolvedPrimaryUrl, resolvedPrimaryUsername, resolvedPrimaryPassword);
         if (primary != null) {
             logger.info(">>> CONNECTED to PRIMARY database.");
@@ -103,6 +108,7 @@ public class DatabaseConfig {
         
         logger.warn(">>> Primary database UNAVAILABLE or NOT CONFIGURED. Attempting switch to BACKUP...");
 
+        // Attempt a backup connection (typically a local database).
         logger.info("Step 2: Checking Backup Database (Local)...");
         DataSource backup = createDataSource("Backup (Local)", backupUrl, backupUsername, backupPassword);
         if (backup != null) {
@@ -112,6 +118,7 @@ public class DatabaseConfig {
         
         logger.error(">>> Backup database UNAVAILABLE.");
 
+        // Final fallback: H2 in-memory database for local/dev usage when no external DB is reachable.
         logger.warn("Step 3: All external databases failed. Falling back to local H2 in-memory database.");
         logger.warn(">>> FALLBACK H2 ACTIVE: data will NOT persist across restarts.");
         return DataSourceBuilder.create()
@@ -126,6 +133,7 @@ public class DatabaseConfig {
     public CommandLineRunner databaseStartupCheck(DataSource dataSource, UserRepository userRepository, CompanyRepository companyRepository,  PasswordEncoder passwordEncoder) {
         return args -> {
             try (Connection connection = dataSource.getConnection()) {
+                // Verify DB connectivity at startup and seed a default test user if it does not exist.
                 DatabaseMetaData meta = connection.getMetaData();
                 String product = meta == null ? "" : meta.getDatabaseProductName();
                 String url = meta == null ? "" : meta.getURL();
@@ -160,6 +168,7 @@ public class DatabaseConfig {
     }
 
     private String generateUniqueRetrieveCode(UserRepository userRepository) {
+        // Generate a short unique retrieve code, retrying a few times before falling back to a longer value.
         for (int i = 0; i < 10; i++) {
             String code = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
             if (!userRepository.existsByRetrieveCode(code)) {
@@ -170,6 +179,7 @@ public class DatabaseConfig {
     }
 
     private DataSource createDataSource(String name, String url, String username, String password) {
+        // Validate inputs, extract credentials from JDBC URLs when present, and test the connection before returning.
         if (isBlank(url)) {
             logger.info("{} database URL not configured, skipping.", name);
             return null;
@@ -213,6 +223,7 @@ public class DatabaseConfig {
     }
 
     private Map<String, String> extractCredentialsFromJdbcUrl(String jdbcUrl) {
+        // Extract user/password from either URI userinfo (postgresql://user:pass@host) or query string (?user=...&password=...).
         Map<String, String> out = new HashMap<>();
         if (isBlank(jdbcUrl)) return out;
 
@@ -257,6 +268,7 @@ public class DatabaseConfig {
     }
 
     private String stripUserInfoFromJdbcUrl(String jdbcUrl) {
+        // Remove userinfo from the URL so credentials are not sent via the URL component (and can be safely logged/sanitized).
         if (isBlank(jdbcUrl)) return "";
         String value = jdbcUrl.trim();
         String uriValue = value.startsWith("jdbc:") ? value.substring(5) : value;
@@ -278,6 +290,7 @@ public class DatabaseConfig {
     }
 
     private String firstNonBlank(String... values) {
+        // Return the first non-empty configuration value from a list of candidates.
         if (values == null) return "";
         for (String value : values) {
             if (!isBlank(value)) return value.trim();
@@ -286,6 +299,7 @@ public class DatabaseConfig {
     }
 
     private String normalizeJdbcUrl(String url) {
+        // Normalize common database URL formats to a JDBC URL.
         String value = url.trim();
         if (value.startsWith("jdbc:")) return value;
         if (value.startsWith("postgres://")) return "jdbc:" + value.replaceFirst("^postgres://", "postgresql://");
@@ -294,6 +308,7 @@ public class DatabaseConfig {
     }
 
     private String sanitizeJdbcUrlForLog(String jdbcUrl) {
+        // Mask password query parameters before logging to avoid leaking secrets.
         if (isBlank(jdbcUrl)) return "";
         String value = stripUserInfoFromJdbcUrl(jdbcUrl);
         int q = value.indexOf('?');
@@ -323,6 +338,7 @@ public class DatabaseConfig {
     }
 
     private String buildSupabaseJdbcUrl(String supabaseUrl, String databaseName) {
+        // Build a Supabase Postgres JDBC URL from SUPABASE_URL, inferring the project reference from the hostname.
         if (isBlank(supabaseUrl)) return "";
         String raw = supabaseUrl.trim();
         String host = "";

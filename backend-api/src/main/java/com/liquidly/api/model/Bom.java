@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+// JPA entity representing a BOM (bill of materials) item requirement for a project.
 @Entity
 @Table(name = "boms")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
@@ -51,6 +52,7 @@ public class Bom {
     private LocalDateTime createdAt;
 
     @PrePersist
+    // Set the creation timestamp automatically when the record is first persisted.
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }

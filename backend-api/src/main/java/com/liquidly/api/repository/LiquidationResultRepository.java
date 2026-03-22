@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
+// Data access layer for liquidation result entities.
 public interface LiquidationResultRepository extends JpaRepository<LiquidationResult, Long> {
     List<LiquidationResult> findByProject(Project project);
     List<LiquidationResult> findByProjectId(Long projectId);

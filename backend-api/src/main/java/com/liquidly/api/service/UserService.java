@@ -57,6 +57,7 @@ public class UserService {
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
+    // Create a new user account, validate password rules, and enforce company uniqueness when a company name is provided.
     public UserDTO signup(SignupRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already in use");
@@ -93,12 +94,12 @@ public class UserService {
             }
         }
 
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
         User savedUser = userRepository.save(user);
         logger.info("Usuario criado: email={}, companyId={}", savedUser.getEmail(), savedUser.getCompany() == null ? null : savedUser.getCompany().getId());
         return mapToDTO(savedUser);
     }
 
+    // Authenticate a user by email/password and return a DTO when credentials match.
     public UserDTO login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("This account doesn't exist"));
@@ -111,6 +112,7 @@ public class UserService {
         return mapToDTO(user);
     }
 
+    // Authenticate a user using face image matching against stored face templates.
     public UserDTO loginFace(FaceLoginRequest request) {
         if (request.getFaceImage() == null || request.getFaceImage().isEmpty()) {
             throw new RuntimeException("Face image is required");
@@ -129,6 +131,7 @@ public class UserService {
         throw new RuntimeException("Face not recognized");
     }
 
+    // Check if an email is already registered.
     public boolean emailExists(String email) {
         if (email == null || email.trim().isEmpty()) {
             throw new RuntimeException("Email is required");
@@ -136,6 +139,7 @@ public class UserService {
         return userRepository.existsByEmail(email.trim());
     }
 
+    // Ensure a recovery code exists for the user and ask the email service(s) to deliver it.
     public void sendRecoveryCodeEmail(String email) {
         if (email == null || email.trim().isEmpty()) {
             throw new RuntimeException("Email is required");
@@ -202,6 +206,7 @@ public class UserService {
         throw new RuntimeException("Could not send recovery code");
     }
 
+    // Validate the recovery code, validate password rules, and persist the new password.
     public void resetPassword(String email, String code, String newPassword) {
         if (email == null || email.trim().isEmpty()) {
             throw new RuntimeException("Email is required");

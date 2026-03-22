@@ -24,11 +24,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
+        // Configure HTTP security for a stateless API protected by JWT.
         http
+                // Disable CSRF for APIs (no server-side sessions / browser form posts).
                 .csrf(csrf -> csrf.disable())
+                // Enable CORS so frontends can call the API from different origins.
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                        // Allow CORS preflight requests.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Allow unauthenticated access to auth and recovery endpoints.
                         .requestMatchers(
                                 "/api/users/login",
                                 "/api/users/login-face",
@@ -37,8 +42,10 @@ public class SecurityConfig {
                                 "/api/users/recovery/send-code",
                                 "/api/users/recovery/reset-password"
                         ).permitAll()
+                        // Require authentication for all other endpoints.
                         .anyRequest().authenticated()
                 )
+                // Validate JWTs before Spring Security's username/password authentication filter.
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

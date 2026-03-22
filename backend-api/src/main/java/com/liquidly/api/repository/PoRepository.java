@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 @Repository
+// Data access layer for purchase order (PO) entities.
 public interface PoRepository extends JpaRepository<Po, Long> {
     List<Po> findByCompany(Company company);
     List<Po> findByCompanyId(Long companyId);

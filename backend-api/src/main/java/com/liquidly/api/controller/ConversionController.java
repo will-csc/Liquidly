@@ -16,21 +16,25 @@ public class ConversionController {
     @Autowired
     private ConversionService conversionService;
 
+    // Create a conversion record.
     @PostMapping
     public ResponseEntity<Conversion> createConversion(@RequestBody Conversion conversion) {
         return ResponseEntity.ok(conversionService.createConversion(conversion));
     }
 
+    // Return all conversion records.
     @GetMapping
     public ResponseEntity<List<Conversion>> getAllConversions() {
         return ResponseEntity.ok(conversionService.getAllConversions());
     }
 
+    // Return conversion records filtered by company id.
     @GetMapping("/company/{companyId}")
     public ResponseEntity<List<Conversion>> getConversionsByCompanyId(@PathVariable Long companyId) {
         return ResponseEntity.ok(conversionService.getConversionsByCompanyId(companyId));
     }
 
+    // Return a single conversion record by company id and item code.
     @GetMapping("/company/{companyId}/item/{itemCode}")
     public ResponseEntity<Conversion> getConversionByItemCodeAndCompanyId(
             @PathVariable Long companyId,
@@ -40,11 +44,13 @@ public class ConversionController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Return a conversion record by id.
     @GetMapping("/{id}")
     public ResponseEntity<Conversion> getConversionById(@PathVariable Long id) {
         return ResponseEntity.ok(conversionService.getConversionById(id));
     }
 
+    // Delete a conversion record by id.
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteConversion(@PathVariable Long id) {
         conversionService.deleteConversion(id);

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+// JPA entity representing one row of the liquidation report (BOM vs invoice/PO consumption).
 @Entity
 @Table(name = "liquidation_results")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
@@ -84,6 +85,7 @@ public class LiquidationResult {
     private LocalDateTime createdAt;
 
     @PrePersist
+    // Set the creation timestamp automatically when the record is first persisted.
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }

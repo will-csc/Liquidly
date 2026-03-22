@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
+// Data access layer for unit conversion entities.
 public interface ConversionRepository extends JpaRepository<Conversion, Long> {
     List<Conversion> findByCompany(Company company);
     List<Conversion> findByCompanyId(Long companyId);

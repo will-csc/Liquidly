@@ -1,5 +1,6 @@
 package com.liquidly.api.dto;
 
+// Request payload for face-image login.
 public class FaceLoginRequest {
     private String faceImage;
 

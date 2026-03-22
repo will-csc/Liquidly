@@ -31,11 +31,13 @@ public class JwtFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        // Capture request metadata for audit logging and timing.
         long start = System.currentTimeMillis();
         String userBefore = getAuthenticatedUser();
         String method = request.getMethod();
         String path = getPathWithQuery(request);
 
+        // Read the Authorization header and authenticate the request when a Bearer token is present.
         String header = request.getHeader("Authorization");
 
         if (header != null && header.startsWith("Bearer ")) {
@@ -46,6 +48,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 String email = jwtService.extractEmail(token);
 
+                // Store the authenticated principal in the Spring Security context.
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
                                 email,
@@ -58,13 +61,16 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         try {
+            // Continue the filter chain so controllers can handle the request.
             filterChain.doFilter(request, response);
         } catch (Exception e) {
+            // Log failed requests with route, user, status and root cause to help debugging.
             long ms = System.currentTimeMillis() - start;
             String user = firstNonBlank(getAuthenticatedUser(), userBefore, "anon");
             logger.warn("Usuario {} falhou na rota {} {} (ms={}, erro={})", user, method, path, ms, getRootCauseMessage(e));
             throw e;
         } finally {
+            // Log every request (except CORS preflight) with timing and status code.
             int status = response.getStatus();
             if (!"OPTIONS".equalsIgnoreCase(method)) {
                 long ms = System.currentTimeMillis() - start;
