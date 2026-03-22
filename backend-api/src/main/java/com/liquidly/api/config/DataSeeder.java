@@ -7,6 +7,7 @@ import com.liquidly.api.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -14,7 +15,7 @@ import java.util.Optional;
 public class DataSeeder {
 
     @Bean
-    public CommandLineRunner initData(UserRepository userRepository, CompanyRepository companyRepository) {
+    public CommandLineRunner initData(UserRepository userRepository, CompanyRepository companyRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             // 1. Create Default Company if not exists
             String companyName = "Liquidly Demo Corp";
@@ -31,7 +32,7 @@ public class DataSeeder {
                 User user = new User();
                 user.setName("Admin User");
                 user.setEmail(userEmail);
-                user.setPassword("admin123"); // In real app, hash this!
+                user.setPassword(passwordEncoder.encode("admin123")); // In real app, hash this!
                 user.setCompany(company);
                 userRepository.save(user);
                 System.out.println(">>> Default User Created: " + userEmail + " / admin123");
@@ -43,7 +44,7 @@ public class DataSeeder {
                 User user = new User();
                 user.setName("Test User");
                 user.setEmail(testEmail);
-                user.setPassword("user123");
+                user.setPassword(passwordEncoder.encode("user123"));
                 user.setCompany(company);
                 userRepository.save(user);
                 System.out.println(">>> Test User Created: " + testEmail + " / user123");

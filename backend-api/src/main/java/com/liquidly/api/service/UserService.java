@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -30,6 +31,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
 
 @Service
 public class UserService {
@@ -52,6 +54,9 @@ public class UserService {
     @Value("${email.service.apiKey:}")
     private String emailServiceApiKey;
 
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
     public UserDTO signup(SignupRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already in use");
@@ -62,7 +67,7 @@ public class UserService {
         user.setEmail(request.getEmail());
         
         validatePassword(request.getPassword());
-        user.setPassword(request.getPassword()); // In a real app, hash this!
+        user.setPassword(passwordEncoder.encode(request.getPassword())); // In a real app, hash this!
         
         if (request.getFaceImage() != null) {
             user.setFaceImage(request.getFaceImage());
@@ -88,6 +93,7 @@ public class UserService {
             }
         }
 
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         User savedUser = userRepository.save(user);
         logger.info("Usuario criado: email={}, companyId={}", savedUser.getEmail(), savedUser.getCompany() == null ? null : savedUser.getCompany().getId());
         return mapToDTO(savedUser);
@@ -97,7 +103,7 @@ public class UserService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("This account doesn't exist"));
 
-        if (!user.getPassword().equals(request.getPassword())) { // Simple comparison
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) { // Simple comparison
             throw new RuntimeException("The password is wrong");
         }
 
@@ -220,7 +226,7 @@ public class UserService {
         }
 
         validatePassword(newPassword);
-        user.setPassword(newPassword);
+        user.setPassword(passwordEncoder.encode(newPassword));
         user.setRetrieveCode(null);
         userRepository.save(user);
     }
@@ -327,6 +333,7 @@ public class UserService {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new RuntimeException("Email already in use");
         }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         if (user.getRetrieveCode() == null || user.getRetrieveCode().trim().isEmpty()) {
             user.setRetrieveCode(generateUniqueRetrieveCode());
         }

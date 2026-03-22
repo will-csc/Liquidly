@@ -55,12 +55,6 @@ public class UserController {
                 )
         );
     }
-
-    @PostMapping
-    public ResponseEntity<UserDTO> createUser(@RequestBody User user) {
-        return ResponseEntity.ok(userService.createUser(user));
-    }
-
     @GetMapping
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());

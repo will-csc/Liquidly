@@ -12,6 +12,7 @@ import com.liquidly.api.model.Company;
 import com.liquidly.api.model.User;
 import com.liquidly.api.repository.CompanyRepository;
 import com.liquidly.api.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.sql.DataSource;
 import java.net.URI;
@@ -122,7 +123,7 @@ public class DatabaseConfig {
     }
 
     @Bean
-    public CommandLineRunner databaseStartupCheck(DataSource dataSource, UserRepository userRepository, CompanyRepository companyRepository) {
+    public CommandLineRunner databaseStartupCheck(DataSource dataSource, UserRepository userRepository, CompanyRepository companyRepository,  PasswordEncoder passwordEncoder) {
         return args -> {
             try (Connection connection = dataSource.getConnection()) {
                 DatabaseMetaData meta = connection.getMetaData();
@@ -147,7 +148,7 @@ public class DatabaseConfig {
                 User u = new User();
                 u.setName("Usuario Teste");
                 u.setEmail(email);
-                u.setPassword("teste123");
+                u.setPassword(passwordEncoder.encode("teste123"));
                 u.setCompany(company);
                 u.setRetrieveCode(generateUniqueRetrieveCode(userRepository));
                 userRepository.save(u);
