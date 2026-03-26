@@ -200,6 +200,12 @@ export const authService = {
   }
 };
 
+export const userService = {
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/api/users/${id}`);
+  },
+};
+
 export const bomService = {
   getAll: async (): Promise<Bom[]> => {
     const response = await api.get<Bom[]>('/api/boms');
