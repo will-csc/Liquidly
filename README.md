@@ -2,6 +2,10 @@
 
 Liquidly is a multi-platform application to help companies consolidate and analyze **Invoices × Purchase Orders (POs) × Bill of Materials (BOM)**, detect variances, and generate reports.
 
+## Overview
+<img width="1875" height="890" alt="image" src="https://github.com/user-attachments/assets/0739b17e-593b-4da8-ab65-47908d928f1b" />
+
+
 The repository contains:
 
 - **Backend API** (Spring Boot + PostgreSQL/H2)
