@@ -114,13 +114,14 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("This account doesn't exist"));
 
-        PasswordCheckResult check = checkPassword(rawPassword, user.getPassword());
-        if (!check.matches) {
+        String stored = user.getPassword();
+        String bcryptHash = requireBcryptHash(stored);
+        if (!passwordEncoder.matches(rawPassword, bcryptHash)) {
             throw new RuntimeException("The password is wrong");
         }
 
-        if (check.shouldUpgradeHash) {
-            user.setPassword(passwordEncoder.encode(rawPassword));
+        if (stored != null && stored.startsWith("{bcrypt}")) {
+            user.setPassword(bcryptHash);
             userRepository.save(user);
         }
 
@@ -128,48 +129,21 @@ public class UserService {
         return mapToDTO(user);
     }
 
-    private static final class PasswordCheckResult {
-        private final boolean matches;
-        private final boolean shouldUpgradeHash;
-
-        private PasswordCheckResult(boolean matches, boolean shouldUpgradeHash) {
-            this.matches = matches;
-            this.shouldUpgradeHash = shouldUpgradeHash;
-        }
-    }
-
-    private PasswordCheckResult checkPassword(String rawPassword, String storedPassword) {
+    private String requireBcryptHash(String storedPassword) {
         if (storedPassword == null || storedPassword.isEmpty()) {
-            return new PasswordCheckResult(false, false);
+            throw new RuntimeException("Invalid password hash");
         }
 
-        if (storedPassword.startsWith("{bcrypt}")) {
-            String normalized = storedPassword.substring("{bcrypt}".length());
-            boolean ok = safeMatchesBcrypt(rawPassword, normalized);
-            return new PasswordCheckResult(ok, ok);
+        String value = storedPassword;
+        if (value.startsWith("{bcrypt}")) {
+            value = value.substring("{bcrypt}".length());
         }
 
-        if (storedPassword.startsWith("{noop}")) {
-            String plain = storedPassword.substring("{noop}".length());
-            boolean ok = rawPassword.equals(plain);
-            return new PasswordCheckResult(ok, ok);
+        if (!looksLikeBcrypt(value)) {
+            throw new RuntimeException("Invalid password hash");
         }
 
-        if (looksLikeBcrypt(storedPassword)) {
-            boolean ok = safeMatchesBcrypt(rawPassword, storedPassword);
-            return new PasswordCheckResult(ok, false);
-        }
-
-        boolean legacyOk = rawPassword.equals(storedPassword);
-        return new PasswordCheckResult(legacyOk, legacyOk);
-    }
-
-    private boolean safeMatchesBcrypt(String rawPassword, String bcryptHash) {
-        try {
-            return passwordEncoder.matches(rawPassword, bcryptHash);
-        } catch (Exception ignored) {
-            return false;
-        }
+        return value;
     }
 
     private boolean looksLikeBcrypt(String value) {
