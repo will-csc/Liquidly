@@ -140,7 +140,7 @@ public class DatabaseConfig {
                 logger.info("conexão bem feita no banco de dados");
                 logger.info("Banco conectado (produto={}, url={})", product, sanitizeJdbcUrlForLog(url));
 
-                String email = "teste@liquidly.com";
+                String email = "adm@test.com";
                 if (userRepository.existsByEmail(email)) {
                     logger.info("Usuario teste já existe: {}", email);
                     return;
@@ -154,7 +154,7 @@ public class DatabaseConfig {
                         });
 
                 User u = new User();
-                u.setName("Usuario Teste");
+                u.setName("Admin Test");
                 u.setEmail(email);
                 u.setPassword(passwordEncoder.encode("teste123"));
                 u.setCompany(company);
