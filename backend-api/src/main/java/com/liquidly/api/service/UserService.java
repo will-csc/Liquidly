@@ -101,15 +101,79 @@ public class UserService {
 
     // Authenticate a user by email/password and return a DTO when credentials match.
     public UserDTO login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new RuntimeException("Email is required");
+        }
+        if (request.getPassword() == null) {
+            throw new RuntimeException("Password is required");
+        }
+
+        String email = request.getEmail().trim();
+        String rawPassword = request.getPassword();
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("This account doesn't exist"));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) { // Simple comparison
+        PasswordCheckResult check = checkPassword(rawPassword, user.getPassword());
+        if (!check.matches) {
             throw new RuntimeException("The password is wrong");
+        }
+
+        if (check.shouldUpgradeHash) {
+            user.setPassword(passwordEncoder.encode(rawPassword));
+            userRepository.save(user);
         }
 
         logger.info("Login sucesso: email={}", user.getEmail());
         return mapToDTO(user);
+    }
+
+    private static final class PasswordCheckResult {
+        private final boolean matches;
+        private final boolean shouldUpgradeHash;
+
+        private PasswordCheckResult(boolean matches, boolean shouldUpgradeHash) {
+            this.matches = matches;
+            this.shouldUpgradeHash = shouldUpgradeHash;
+        }
+    }
+
+    private PasswordCheckResult checkPassword(String rawPassword, String storedPassword) {
+        if (storedPassword == null || storedPassword.isEmpty()) {
+            return new PasswordCheckResult(false, false);
+        }
+
+        if (storedPassword.startsWith("{bcrypt}")) {
+            String normalized = storedPassword.substring("{bcrypt}".length());
+            boolean ok = safeMatchesBcrypt(rawPassword, normalized);
+            return new PasswordCheckResult(ok, ok);
+        }
+
+        if (storedPassword.startsWith("{noop}")) {
+            String plain = storedPassword.substring("{noop}".length());
+            boolean ok = rawPassword.equals(plain);
+            return new PasswordCheckResult(ok, ok);
+        }
+
+        if (looksLikeBcrypt(storedPassword)) {
+            boolean ok = safeMatchesBcrypt(rawPassword, storedPassword);
+            return new PasswordCheckResult(ok, false);
+        }
+
+        boolean legacyOk = rawPassword.equals(storedPassword);
+        return new PasswordCheckResult(legacyOk, legacyOk);
+    }
+
+    private boolean safeMatchesBcrypt(String rawPassword, String bcryptHash) {
+        try {
+            return passwordEncoder.matches(rawPassword, bcryptHash);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private boolean looksLikeBcrypt(String value) {
+        return value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$");
     }
 
     // Authenticate a user using face image matching against stored face templates.
