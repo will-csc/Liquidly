@@ -17,6 +17,9 @@
     "android": {},
     "web": {
       "favicon": "./src/assets/images/logo-liquidly.png"
-    }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }

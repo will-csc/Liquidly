@@ -1,6 +1,11 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SignUp from '../SignUp';
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
 
 // Mock navigation
 const mockNavigation = {
@@ -8,9 +13,21 @@ const mockNavigation = {
   goBack: jest.fn(),
 };
 
+const initialMetrics = {
+  frame: { x: 0, y: 0, width: 0, height: 0 },
+  insets: { top: 0, left: 0, right: 0, bottom: 0 },
+};
+
+const renderSignUp = () =>
+  render(
+    <SafeAreaProvider initialMetrics={initialMetrics as any}>
+      <SignUp navigation={mockNavigation} />
+    </SafeAreaProvider>
+  );
+
 describe('SignUp Screen', () => {
   it('renders correctly', () => {
-    const { getByText } = render(<SignUp navigation={mockNavigation} />);
+    const { getByText } = renderSignUp();
     
     expect(getByText('Get Started')).toBeTruthy();
     expect(getByText('Name')).toBeTruthy();
@@ -22,7 +39,7 @@ describe('SignUp Screen', () => {
   });
 
   it('navigates to SignIn when Sign In link is pressed', () => {
-    const { getByText } = render(<SignUp navigation={mockNavigation} />);
+    const { getByText } = renderSignUp();
     
     fireEvent.press(getByText('Sign In'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('SignIn');

@@ -27,6 +27,103 @@ let isFallbackActive = false;
 
 console.log(`[Mobile API] Initializing with URL: ${currentBaseUrl}`);
 
+type RequestMeta = { start: number; id: string };
+
+const LOG_API = true;
+
+const nowMs = () => Date.now();
+
+const newRequestId = () => `${nowMs().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const asRecord = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null);
+
+const redactValue = (key: string, value: unknown) => {
+  const k = key.toLowerCase();
+  if (k === 'authorization' || k.includes('token')) return '[REDACTED]';
+  if (k.includes('password')) return '[REDACTED]';
+  if (k.includes('faceimage')) return '[REDACTED]';
+  return value;
+};
+
+const redactObject = (obj: unknown): unknown => {
+  const rec = asRecord(obj);
+  if (!rec) return obj;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(rec)) {
+    out[k] = redactValue(k, v);
+  }
+  return out;
+};
+
+const safeToLog = (value: unknown) => {
+  if (value === undefined) return undefined;
+  if (typeof value === 'string') return value.length > 800 ? `${value.slice(0, 800)}…` : value;
+  return redactObject(value);
+};
+
+const logRequest = (config: InternalAxiosRequestConfig & { metadata?: RequestMeta }) => {
+  if (!LOG_API) return;
+  const method = typeof config.method === 'string' ? config.method.toUpperCase() : 'GET';
+  const baseURL = config.baseURL || currentBaseUrl;
+  const url = config.url || '';
+  const params = safeToLog(config.params);
+  const data = safeToLog(config.data);
+  const headers = safeToLog(config.headers);
+  console.log('[Mobile API] Request', {
+    id: config.metadata?.id,
+    method,
+    baseURL,
+    url,
+    params,
+    data,
+    headers,
+  });
+};
+
+const logResponse = (
+  config: InternalAxiosRequestConfig & { metadata?: RequestMeta },
+  status: number,
+  data: unknown
+) => {
+  if (!LOG_API) return;
+  const method = typeof config.method === 'string' ? config.method.toUpperCase() : 'GET';
+  const baseURL = config.baseURL || currentBaseUrl;
+  const url = config.url || '';
+  const elapsedMs = config.metadata ? nowMs() - config.metadata.start : undefined;
+  console.log('[Mobile API] Response', {
+    id: config.metadata?.id,
+    method,
+    baseURL,
+    url,
+    status,
+    elapsedMs,
+    data: safeToLog(data),
+  });
+};
+
+const logError = (error: AxiosError) => {
+  if (!LOG_API) return;
+  const config = (error.config || {}) as InternalAxiosRequestConfig & { metadata?: RequestMeta };
+  const method = typeof config.method === 'string' ? config.method.toUpperCase() : undefined;
+  const baseURL = config.baseURL || currentBaseUrl;
+  const url = config.url;
+  const status = error.response?.status;
+  const elapsedMs = config.metadata ? nowMs() - config.metadata.start : undefined;
+  const responseData = error.response?.data;
+
+  console.log('[Mobile API] Error', {
+    id: config.metadata?.id,
+    method,
+    baseURL,
+    url,
+    status,
+    code: error.code,
+    message: error.message,
+    elapsedMs,
+    response: safeToLog(responseData),
+  });
+};
+
 // Create Axios Instance
 const api: AxiosInstance = axios.create({
   baseURL: currentBaseUrl,
@@ -39,14 +136,21 @@ const api: AxiosInstance = axios.create({
 // Request Interceptor: Ensure updated URL
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    const cfg = config as InternalAxiosRequestConfig & { metadata?: RequestMeta };
+    cfg.metadata = { start: nowMs(), id: newRequestId() };
     if (config.baseURL !== currentBaseUrl) {
       config.baseURL = currentBaseUrl;
     }
     const token = userStorage.getToken();
     if (token) {
-      const base = (config.headers && typeof config.headers === 'object') ? (config.headers as Record<string, unknown>) : {};
-      config.headers = { ...base, Authorization: `Bearer ${token}` };
+      const headers = config.headers as any;
+      if (headers && typeof headers.set === 'function') {
+        headers.set('Authorization', `Bearer ${token}`);
+      } else if (headers && typeof headers === 'object') {
+        headers.Authorization = `Bearer ${token}`;
+      }
     }
+    logRequest(cfg);
     return config;
   },
   (error) => Promise.reject(error)
@@ -54,8 +158,13 @@ api.interceptors.request.use(
 
 // Response Interceptor: Failover Logic
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const cfg = (response.config || {}) as InternalAxiosRequestConfig & { metadata?: RequestMeta };
+    logResponse(cfg, response.status, response.data);
+    return response;
+  },
   async (error: AxiosError) => {
+    logError(error);
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // If network/connection error and fallback hasn't been tried yet
@@ -81,6 +190,7 @@ api.interceptors.response.use(
       try {
         return await api(originalRequest);
       } catch (retryError) {
+        if (axios.isAxiosError(retryError)) logError(retryError);
         console.error('[Mobile API Failover] Backup server (local) also failed.', retryError);
         return Promise.reject(retryError);
       }
