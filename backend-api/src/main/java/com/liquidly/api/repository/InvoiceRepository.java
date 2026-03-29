@@ -19,4 +19,5 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByCompanyIdAndProjectId(Long companyId, Long projectId);
     Optional<Invoice> findByInvoiceNumberAndCompany(String invoiceNumber, Company company);
     Optional<Invoice> findByInvoiceNumberAndCompanyId(String invoiceNumber, Long companyId);
+    void deleteByCompanyId(Long companyId);
 }

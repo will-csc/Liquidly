@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { bomService, projectService, reportService } from "@/services/api";
 import type { Bom, Project } from "@/types";
+import { useI18n } from "@/i18n/i18n";
 
 interface SectionProps {
   title: string;
@@ -79,6 +80,7 @@ const SelectRow = ({
 );
 
 const ReportsForm = () => {
+  const { t } = useI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [boms, setBoms] = useState<Bom[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>("");
@@ -167,11 +169,11 @@ const ReportsForm = () => {
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       });
-      showNotice("success", "Relatório gerado e enviado por email.");
+      showNotice("success", t("report.notice.success"));
     } catch (err: unknown) {
       type ErrorWithResponse = { response?: { data?: { message?: string } } };
       const maybe = err as ErrorWithResponse;
-      const message = maybe?.response?.data?.message || "Não foi possível gerar/enviar o relatório.";
+      const message = maybe?.response?.data?.message || t("report.notice.failed");
       showNotice("error", message);
     } finally {
       setIsRunning(false);
@@ -181,26 +183,26 @@ const ReportsForm = () => {
   return (
     <div className="bg-card rounded-2xl shadow-elevated p-8 space-y-6 border border-border/50 max-w-2xl mx-auto w-full">
       <div className="mb-6">
-        <h1 className="text-2xl font-display font-bold text-foreground">Reports</h1>
-        <p className="text-sm text-muted-foreground">Generate detailed project reports</p>
+        <h1 className="text-2xl font-display font-bold text-foreground">{t("report.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("report.subtitle")}</p>
       </div>
 
-      <Section title="Project Details">
+      <Section title={t("report.section.projectDetails")}>
         <SelectRow
-          label="Project:"
-          placeholder="Select a project..."
+          label={t("report.label.project")}
+          placeholder={t("report.placeholder.selectProject")}
           options={projects.map((p) => ({ value: p.id || "", label: p.name }))}
           value={selectedProject}
           onChange={(e) => setSelectedProject(e.target.value)}
         />
       </Section>
       <div className="h-px bg-border" />
-      <Section title="BOM Details">
+      <Section title={t("report.section.bomDetails")}>
         <SelectRow
-          label="Select items:"
-          placeholder="Choose items..."
+          label={t("report.label.items")}
+          placeholder={t("report.placeholder.chooseItems")}
           options={[
-            { value: "all", label: "All" },
+            { value: "all", label: t("report.option.all") },
             ...boms.map((b) => ({ value: b.id || "", label: `${b.itemCode} - ${b.itemName}` })),
           ]}
           value={selectedBom}
@@ -208,9 +210,9 @@ const ReportsForm = () => {
         />
       </Section>
       <div className="h-px bg-border" />
-      <Section title="Date Range">
+      <Section title={t("report.section.dateRange")}>
         <FieldRow
-          label="Start date:"
+          label={t("report.label.startDate")}
           placeholder="dd/mm/yyyy"
           type="date"
           value={startDate}
@@ -218,7 +220,7 @@ const ReportsForm = () => {
           max={endDate || undefined}
         />
         <FieldRow
-          label="End date:"
+          label={t("report.label.endDate")}
           placeholder="dd/mm/yyyy"
           type="date"
           value={endDate}
@@ -234,11 +236,11 @@ const ReportsForm = () => {
           disabled={isRunning}
         >
           <Play className="w-4 h-4 mr-2" />
-          {isRunning ? "Gerando e enviando..." : "Run Report"}
+          {isRunning ? t("report.button.running") : t("report.button.run")}
         </Button>
         <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
           <Mail className="w-3 h-3" />
-          The file will be sent to your email
+          {t("report.helper.emailSent")}
         </p>
       </div>
 

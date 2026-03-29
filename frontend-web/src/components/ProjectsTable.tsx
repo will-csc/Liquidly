@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { projectService } from "@/services/api";
 import type { Project } from "@/types";
 import { getCell, parseExcelFile } from "@/lib/excel";
+import { useI18n } from "@/i18n/i18n";
 
 const emptyProject = (): Project => ({
   id: undefined,
@@ -18,6 +19,7 @@ const emptyProject = (): Project => ({
 const normalizeProjectName = (name: string) => name.trim().toLowerCase();
 
 const ProjectsTable = () => {
+  const { t } = useI18n();
   const [items, setItems] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -243,8 +245,8 @@ const ProjectsTable = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-display font-bold text-foreground">Projects</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{items.length} registered projects</p>
+          <h1 className="text-xl font-display font-bold text-foreground">{t("projects.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("projects.count", { count: items.length })}</p>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -264,10 +266,10 @@ const ProjectsTable = () => {
             disabled={adding || loading || importing}
             onClick={() => importInputRef.current?.click()}
           >
-            Import Excel
+            {t("common.importExcel")}
           </Button>
           <Button onClick={() => setAdding(true)} disabled={adding || loading || importing} size="sm" className="rounded-lg">
-            <Plus className="w-4 h-4 mr-1.5" /> New Project
+            <Plus className="w-4 h-4 mr-1.5" /> {t("projects.newProject")}
           </Button>
         </div>
       </div>
@@ -277,8 +279,8 @@ const ProjectsTable = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/40">
-                <th className="text-left py-2.5 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
-                <th className="text-center py-2.5 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">Actions</th>
+                <th className="text-left py-2.5 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("common.name")}</th>
+                <th className="text-center py-2.5 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -299,10 +301,10 @@ const ProjectsTable = () => {
             </tbody>
           </table>
            {items.length === 0 && !loading && !adding && (
-              <div className="p-8 text-center text-muted-foreground">No projects found.</div>
+              <div className="p-8 text-center text-muted-foreground">{t("projects.empty")}</div>
            )}
            {loading && (
-              <div className="p-8 text-center text-muted-foreground">Loading...</div>
+              <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
            )}
         </div>
       </div>

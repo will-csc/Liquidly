@@ -21,4 +21,5 @@ public interface ConversionRepository extends JpaRepository<Conversion, Long> {
             String umInvoice,
             String umBom
     );
+    void deleteByCompanyId(Long companyId);
 }

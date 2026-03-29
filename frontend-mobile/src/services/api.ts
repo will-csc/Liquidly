@@ -256,6 +256,12 @@ export const authService = {
   }
 };
 
+export const userService = {
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/api/users/${id}`);
+  },
+};
+
 export const liquidationResultService = {
   runReport: async (payload: {
     companyId: number;

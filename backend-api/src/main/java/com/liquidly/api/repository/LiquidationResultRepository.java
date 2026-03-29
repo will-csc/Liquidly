@@ -16,4 +16,5 @@ public interface LiquidationResultRepository extends JpaRepository<LiquidationRe
     List<LiquidationResult> findByCompany(Company company);
     List<LiquidationResult> findByCompanyId(Long companyId);
     void deleteByCompanyIdAndProjectId(Long companyId, Long projectId);
+    void deleteByCompanyId(Long companyId);
 }

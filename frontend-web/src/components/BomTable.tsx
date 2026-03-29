@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { bomService, projectService } from "@/services/api";
 import type { Bom, Project } from "@/types";
 import { getCell, parseExcelFile, toNumber } from "@/lib/excel";
+import { useI18n } from "@/i18n/i18n";
 
 interface BomRow {
   id: string;
@@ -33,6 +34,7 @@ const emptyItem = (): BomRow => ({
 });
 
 const BomTable = () => {
+  const { t } = useI18n();
   const [items, setItems] = useState<BomRow[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
@@ -525,8 +527,8 @@ const BomTable = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-display font-bold text-foreground">Bill of Materials</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{items.length} items registered</p>
+          <h1 className="text-xl font-display font-bold text-foreground">{t("bom.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("bom.count", { count: items.length })}</p>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -546,10 +548,10 @@ const BomTable = () => {
             disabled={adding || loading || importing}
             onClick={() => importInputRef.current?.click()}
           >
-            Import Excel
+            {t("common.importExcel")}
           </Button>
           <Button onClick={() => setAdding(true)} disabled={adding || loading || importing} size="sm" className="rounded-lg">
-            <Plus className="w-4 h-4 mr-1.5" /> Add Item
+            <Plus className="w-4 h-4 mr-1.5" /> {t("bom.addItem")}
           </Button>
         </div>
       </div>
@@ -620,10 +622,10 @@ const BomTable = () => {
             </tbody>
           </table>
           {items.length === 0 && !loading && !adding && (
-             <div className="p-8 text-center text-muted-foreground">No BOM items found.</div>
+             <div className="p-8 text-center text-muted-foreground">{t("bom.empty")}</div>
           )}
           {loading && (
-             <div className="p-8 text-center text-muted-foreground">Loading...</div>
+             <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
           )}
         </div>
       </div>

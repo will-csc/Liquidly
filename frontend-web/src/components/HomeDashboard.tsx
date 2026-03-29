@@ -2,21 +2,19 @@ import { DollarSign, FileText, ShoppingCart, ClipboardList } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { useEffect, useState } from "react";
 import { invoiceService, poService, bomService } from "@/services/api";
+import { useI18n } from "@/i18n/i18n";
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
+const localeFromLanguage = (language: string) => {
+  if (language === "pt") return "pt-BR";
+  if (language === "es") return "es-ES";
+  return "en-US";
+};
 
 type MonthlyChartDatum = {
   month: string;
   invoices: number;
   pos: number;
   bom: number;
-};
-
-type StatusDatum = {
-  name: string;
-  value: number;
-  color: string;
 };
 
 const KpiCard = ({ title, value, icon: Icon }: {
@@ -34,6 +32,10 @@ const KpiCard = ({ title, value, icon: Icon }: {
 );
 
 const HomeDashboard = () => {
+  const { t, language } = useI18n();
+  const locale = localeFromLanguage(language);
+  const formatNumber = (value: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
+
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalInvoices: 0,
@@ -42,7 +44,7 @@ const HomeDashboard = () => {
     variance: 0
   });
   const [monthlyData, setMonthlyData] = useState<MonthlyChartDatum[]>([]);
-  const [statusData, setStatusData] = useState<StatusDatum[]>([]);
+  const [invoiceStatus, setInvoiceStatus] = useState({ settled: 0, pending: 0 });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,11 +76,7 @@ const HomeDashboard = () => {
         // Assuming settled means remainingQntd is 0 or low
         const settledInvoices = invoices.filter(i => i.remainingQntd <= 0).length;
         const pendingInvoices = invoices.length - settledInvoices;
-        
-        setStatusData([
-          { name: "Settled", value: settledInvoices, color: "hsl(145, 63%, 32%)" },
-          { name: "Pending", value: pendingInvoices, color: "hsl(40, 90%, 50%)" },
-        ]);
+        setInvoiceStatus({ settled: settledInvoices, pending: pendingInvoices });
 
         // Calculate Monthly Data
         // Group by month. Since we might not have dates for everything or they might be all new, 
@@ -86,9 +84,9 @@ const HomeDashboard = () => {
         const months: Record<string, { invoices: number; pos: number; bom: number }> = {};
         
         const processDate = (dateStr: string | undefined) => {
-           if (!dateStr) return "Current";
+           if (!dateStr) return "__current__";
            const date = new Date(dateStr);
-           return date.toLocaleString('default', { month: 'short' });
+           return date.toLocaleString(locale, { month: "short" });
         };
 
         invoices.forEach(i => {
@@ -117,7 +115,7 @@ const HomeDashboard = () => {
         
         // If empty (no dates), create a dummy "Current"
         if (chartData.length === 0) {
-            chartData.push({ month: "Current", invoices: totalInvoices, pos: totalPos, bom: totalBom });
+            chartData.push({ month: "__current__", invoices: totalInvoices, pos: totalPos, bom: totalBom });
         }
 
         setMonthlyData(chartData);
@@ -130,41 +128,50 @@ const HomeDashboard = () => {
     };
 
     fetchData();
-  }, []);
+  }, [locale]);
 
   if (loading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading dashboard data...</div>;
+    return <div className="p-8 text-center text-muted-foreground">{t("dashboard.loading")}</div>;
   }
+
+  const statusData = [
+    { name: t("dashboard.status.settled"), value: invoiceStatus.settled, color: "hsl(145, 63%, 32%)" },
+    { name: t("dashboard.status.pending"), value: invoiceStatus.pending, color: "hsl(40, 90%, 50%)" },
+  ];
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-display font-bold text-foreground">Liquidation Critical Analysis</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Invoices × POs × BOM — Consolidated View</p>
+        <h1 className="text-xl font-display font-bold text-foreground">{t("dashboard.title")}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">{t("dashboard.subtitle")}</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard title="Total Invoices (Qty)" value={formatNumber(stats.totalInvoices)} icon={FileText} />
-        <KpiCard title="Total POs (Qty)" value={formatNumber(stats.totalPos)} icon={ShoppingCart} />
-        <KpiCard title="Total BOM (Qty)" value={formatNumber(stats.totalBom)} icon={ClipboardList} />
-        <KpiCard title="Quantity Variance" value={`${stats.variance.toFixed(1)}%`} icon={DollarSign} />
+        <KpiCard title={t("dashboard.kpi.totalInvoices")} value={formatNumber(stats.totalInvoices)} icon={FileText} />
+        <KpiCard title={t("dashboard.kpi.totalPos")} value={formatNumber(stats.totalPos)} icon={ShoppingCart} />
+        <KpiCard title={t("dashboard.kpi.totalBom")} value={formatNumber(stats.totalBom)} icon={ClipboardList} />
+        <KpiCard title={t("dashboard.kpi.variance")} value={`${stats.variance.toFixed(1)}%`} icon={DollarSign} />
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Bar Chart */}
         <div className="lg:col-span-2 bg-card rounded-xl p-5 shadow-card border border-border/50">
-          <h3 className="font-display font-semibold text-sm text-foreground mb-4">Monthly Comparison (Quantity)</h3>
+          <h3 className="font-display font-semibold text-sm text-foreground mb-4">{t("dashboard.chart.monthlyComparison")}</h3>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={monthlyData} barGap={2}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(150, 15%, 88%)" />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(150, 10%, 45%)" }} />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 11, fill: "hsl(150, 10%, 45%)" }}
+                tickFormatter={(v) => (v === "__current__" ? t("dashboard.month.current") : v)}
+              />
               <YAxis tick={{ fontSize: 11, fill: "hsl(150, 10%, 45%)" }} tickFormatter={(v) => formatNumber(v)} />
               <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatNumber(value) : ''} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="invoices" name="Invoices" fill="hsl(145, 63%, 32%)" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="pos" name="POs" fill="hsl(145, 40%, 55%)" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="invoices" name={t("dashboard.kpi.totalInvoices")} fill="hsl(145, 63%, 32%)" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="pos" name={t("dashboard.kpi.totalPos")} fill="hsl(145, 40%, 55%)" radius={[3, 3, 0, 0]} />
               <Bar dataKey="bom" name="BOM" fill="hsl(145, 20%, 75%)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -172,7 +179,7 @@ const HomeDashboard = () => {
 
         {/* Pie Chart */}
         <div className="bg-card rounded-xl p-5 shadow-card border border-border/50">
-          <h3 className="font-display font-semibold text-sm text-foreground mb-4">Invoice Status</h3>
+          <h3 className="font-display font-semibold text-sm text-foreground mb-4">{t("dashboard.chart.invoiceStatus")}</h3>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie data={statusData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
@@ -180,7 +187,11 @@ const HomeDashboard = () => {
                   <Cell key={i} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number | undefined) => value !== undefined ? `${value} invoices` : ''} />
+              <Tooltip
+                formatter={(value: number | undefined) =>
+                  value !== undefined ? t("dashboard.tooltip.invoicesCount", { count: value }) : ""
+                }
+              />
             </PieChart>
           </ResponsiveContainer>
           <div className="flex justify-center gap-4 mt-2">

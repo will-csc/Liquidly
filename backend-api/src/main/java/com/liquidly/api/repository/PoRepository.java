@@ -15,4 +15,5 @@ public interface PoRepository extends JpaRepository<Po, Long> {
     List<Po> findByCompanyId(Long companyId);
     List<Po> findByInvoiceNumber(String invoiceNumber);
     List<Po> findByCompanyIdAndInvoiceNumberIn(Long companyId, Set<String> invoiceNumbers);
+    void deleteByCompanyId(Long companyId);
 }

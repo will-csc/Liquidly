@@ -6,7 +6,13 @@ import com.liquidly.api.dto.SignupRequest;
 import com.liquidly.api.dto.UserDTO;
 import com.liquidly.api.model.Company;
 import com.liquidly.api.model.User;
+import com.liquidly.api.repository.BomRepository;
 import com.liquidly.api.repository.CompanyRepository;
+import com.liquidly.api.repository.ConversionRepository;
+import com.liquidly.api.repository.InvoiceRepository;
+import com.liquidly.api.repository.LiquidationResultRepository;
+import com.liquidly.api.repository.PoRepository;
+import com.liquidly.api.repository.ProjectRepository;
 import com.liquidly.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -15,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -44,6 +51,24 @@ public class UserService {
 
     @Autowired
     private CompanyRepository companyRepository;
+
+    @Autowired
+    private BomRepository bomRepository;
+
+    @Autowired
+    private InvoiceRepository invoiceRepository;
+
+    @Autowired
+    private PoRepository poRepository;
+
+    @Autowired
+    private ConversionRepository conversionRepository;
+
+    @Autowired
+    private ProjectRepository projectRepository;
+
+    @Autowired
+    private LiquidationResultRepository liquidationResultRepository;
 
     @Value("${email.service.url:http://localhost:5000}")
     private String emailServiceUrl;
@@ -408,10 +433,27 @@ public class UserService {
         return dto;
     }
 
+    @Transactional
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found");
-        }
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
+
+        userRepository.delete(user);
+        userRepository.flush();
+
+        if (companyId == null) return;
+
+        long remainingUsers = userRepository.countByCompanyId(companyId);
+        if (remainingUsers > 0) return;
+
+        liquidationResultRepository.deleteByCompanyId(companyId);
+        invoiceRepository.deleteByCompanyId(companyId);
+        poRepository.deleteByCompanyId(companyId);
+        bomRepository.deleteByCompanyId(companyId);
+        conversionRepository.deleteByCompanyId(companyId);
+        projectRepository.deleteByCompanyId(companyId);
+        companyRepository.deleteById(companyId);
     }
 }

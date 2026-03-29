@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { bomService, conversionService, invoiceService } from "@/services/api";
 import type { Bom, Conversion as ApiConversion, Invoice } from "@/types";
 import { getCell, parseExcelFile, toNumber } from "@/lib/excel";
+import { useI18n } from "@/i18n/i18n";
 
 interface ConversionRow {
   id: string;
@@ -31,6 +32,7 @@ const emptyConversion = (): ConversionRow => ({
 });
 
 const ConversionsTable = () => {
+  const { t } = useI18n();
   const [items, setItems] = useState<ConversionRow[]>([]);
   const [bomUmByItemCode, setBomUmByItemCode] = useState<Record<string, string>>({});
   const [bomEntries, setBomEntries] = useState<Array<{ projectKey: string; projectName: string; itemCode: string; umBom: string }>>([]);
@@ -481,8 +483,8 @@ const ConversionsTable = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-display font-bold text-foreground">Unit Conversions</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{items.length} registered conversions</p>
+          <h1 className="text-xl font-display font-bold text-foreground">{t("conversions.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("conversions.count", { count: items.length })}</p>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -502,10 +504,10 @@ const ConversionsTable = () => {
             disabled={adding || loading || importing}
             onClick={() => importInputRef.current?.click()}
           >
-            Import Excel
+            {t("common.importExcel")}
           </Button>
           <Button onClick={() => setAdding(true)} disabled={adding || loading || importing} size="sm" className="rounded-lg">
-            <Plus className="w-4 h-4 mr-1.5" /> Add Conversion
+            <Plus className="w-4 h-4 mr-1.5" /> {t("conversions.addConversion")}
           </Button>
         </div>
       </div>
@@ -515,8 +517,8 @@ const ConversionsTable = () => {
           <div className="p-4 border-b border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-foreground">These items don&apos;t have conversions</div>
-                <div className="text-xs text-muted-foreground">Baseado em invoices + BOM da empresa</div>
+                <div className="text-sm font-semibold text-foreground">{t("conversions.missing.title")}</div>
+                <div className="text-xs text-muted-foreground">{t("conversions.missing.subtitle")}</div>
               </div>
               <div className="text-xs text-muted-foreground">{missingConversions.length}</div>
             </div>
@@ -553,7 +555,7 @@ const ConversionsTable = () => {
               </tbody>
             </table>
             {missingConversions.length > 20 && (
-              <div className="p-3 text-xs text-muted-foreground">Mostrando 20 de {missingConversions.length}.</div>
+              <div className="p-3 text-xs text-muted-foreground">{t("common.showingOf", { shown: 20, total: missingConversions.length })}</div>
             )}
           </div>
         </div>
@@ -569,7 +571,7 @@ const ConversionsTable = () => {
                 <th className="text-left py-2.5 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">um_invoice</th>
                 <th className="text-right py-2.5 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">qntd_bom</th>
                 <th className="text-left py-2.5 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">um_bom</th>
-                <th className="text-center py-2.5 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">Actions</th>
+                <th className="text-center py-2.5 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -612,10 +614,10 @@ const ConversionsTable = () => {
             </tbody>
           </table>
            {items.length === 0 && !loading && !adding && (
-              <div className="p-8 text-center text-muted-foreground">No conversions found.</div>
+              <div className="p-8 text-center text-muted-foreground">{t("conversions.empty")}</div>
            )}
            {loading && (
-              <div className="p-8 text-center text-muted-foreground">Loading...</div>
+              <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
            )}
         </div>
       </div>

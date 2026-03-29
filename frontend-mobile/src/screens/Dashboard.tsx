@@ -9,10 +9,11 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../styles/theme';
-import { invoiceService, poService, bomService } from '../services/api';
+import { invoiceService, poService, bomService, userService } from '../services/api';
 import { userStorage } from '../services/userStorage';
 import { Invoice, Po, Bom } from '../types';
 import { LineChart, PieChart } from 'react-native-chart-kit';
@@ -26,6 +27,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [stats, setStats] = useState({
     totalInvoices: 0,
     totalPos: 0,
@@ -181,15 +183,58 @@ const Dashboard = () => {
             <Text style={styles.headerTitle}>Dashboard</Text>
             <Text style={styles.headerSubtitle}>Overview of your metrics</Text>
           </View>
-          <TouchableOpacity
-            onPress={async () => {
-              await userStorage.clearUser();
-              navigation.replace('Entry');
-            }}
-            style={styles.logoutButton}
-          >
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => {
+                if (isDeletingAccount) return;
+                const user = userStorage.getUser();
+                if (!user?.id) {
+                  Alert.alert('Erro', 'Usuário não encontrado.');
+                  return;
+                }
+
+                Alert.alert(
+                  'Excluir conta',
+                  'Tem certeza que deseja excluir sua conta?\n\nSe essa for a última conta vinculada à empresa, a empresa e todos os dados (BOM, faturas, POs, conversões, projetos e relatórios) também serão excluídos.\n\nEssa ação não pode ser desfeita.',
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Excluir',
+                      style: 'destructive',
+                      onPress: async () => {
+                        setIsDeletingAccount(true);
+                        try {
+                          await userService.delete(user.id);
+                          await userStorage.clearUser();
+                          navigation.replace('Entry');
+                        } catch (error) {
+                          setErrorMessage(getErrorMessage(error, 'Falha ao excluir a conta'));
+                        } finally {
+                          setIsDeletingAccount(false);
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+              style={[styles.actionButton, styles.deleteButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+              disabled={isDeletingAccount}
+            >
+              <Text style={styles.actionText}>{isDeletingAccount ? 'Excluindo...' : 'Excluir conta'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={async () => {
+                if (isDeletingAccount) return;
+                await userStorage.clearUser();
+                navigation.replace('Entry');
+              }}
+              style={[styles.actionButton, styles.logoutButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+              disabled={isDeletingAccount}
+            >
+              <Text style={styles.actionText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {loading ? (
@@ -278,21 +323,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  headerActions: {
+    alignItems: 'flex-end',
+  },
   headerSubtitle: {
     fontSize: 16,
     color: theme.colors.textLight,
     marginBottom: 20,
   },
+  actionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
+  },
+  deleteButton: {
+    backgroundColor: '#d92d20',
+    marginBottom: 8,
+  },
   logoutButton: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#eee',
+    backgroundColor: theme.colors.primary,
   },
-  logoutText: {
-    color: theme.colors.primary,
+  actionText: {
+    color: '#fff',
     fontWeight: '700',
   },
   dashboardContainer: {

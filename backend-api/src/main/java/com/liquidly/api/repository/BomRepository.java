@@ -16,4 +16,5 @@ public interface BomRepository extends JpaRepository<Bom, Long> {
     List<Bom> findByCompany(Company company);
     List<Bom> findByCompanyId(Long companyId);
     List<Bom> findByCompanyIdAndProjectId(Long companyId, Long projectId);
+    void deleteByCompanyId(Long companyId);
 }
