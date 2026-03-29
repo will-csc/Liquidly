@@ -51,6 +51,16 @@ const getStoredToken = (): string => {
   }
 };
 
+const getStoredLanguage = (): string => {
+  try {
+    const v = localStorage.getItem('language') || '';
+    if (v === 'pt' || v === 'en' || v === 'es') return v;
+  } catch {
+    void 0;
+  }
+  return 'pt';
+};
+
 const logApiError = (label: string, error: AxiosError) => {
   const config = error.config;
   const method = typeof config?.method === 'string' ? config.method.toUpperCase() : undefined;
@@ -85,6 +95,16 @@ api.interceptors.request.use(
     // If fallback is active, force the new URL
     if (config.baseURL !== currentBaseUrl) {
       config.baseURL = currentBaseUrl;
+    }
+    const language = getStoredLanguage();
+    if (!config.headers) {
+      config.headers = {} as unknown as typeof config.headers;
+    }
+    const h0 = config.headers as unknown as { set?: (k: string, v: string) => void; [k: string]: unknown };
+    if (typeof h0?.set === 'function') {
+      h0.set('Accept-Language', language);
+    } else {
+      h0['Accept-Language'] = language;
     }
     const token = getStoredToken();
     if (token) {

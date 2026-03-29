@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
 import Input from '../components/Input';
 import Button from '../components/Button';
@@ -14,9 +14,11 @@ import { useI18n } from '@/i18n/i18n';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [popupKind, setPopupKind] = useState<"error" | "success">("error");
   
   const [isExiting, setIsExiting] = useState(false);
 
@@ -30,10 +32,20 @@ const LoginPage: React.FC = () => {
     }
   }, [error]);
 
-  const { formData, handleChange } = useForm({
+  const { formData, handleChange, setFormData } = useForm({
     email: '',
     password: ''
   });
+
+  useEffect(() => {
+    const state = (location.state ?? null) as { flash?: unknown; email?: unknown } | null;
+    if (state && typeof state.flash === "string" && state.flash.trim()) {
+      setPopupKind("success");
+      setError(state.flash);
+    }
+    const email = state && typeof state.email === "string" ? state.email : null;
+    if (email) setFormData((prev) => ({ ...prev, email }));
+  }, [location.state, setFormData]);
 
   const handleNavigation = (path: string) => {
     setIsExiting(true);
@@ -57,6 +69,7 @@ const LoginPage: React.FC = () => {
   const startCamera = async () => {
     setIsCameraOpen(true);
     setError(null);
+    setPopupKind("error");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       // Small delay to ensure ref is attached
@@ -67,6 +80,7 @@ const LoginPage: React.FC = () => {
       }, 100);
     } catch (err) {
       console.error("Error accessing camera:", err);
+      setPopupKind("error");
       setError(t("login.cameraPermissionError"));
       setIsCameraOpen(false);
     }
@@ -117,12 +131,14 @@ const LoginPage: React.FC = () => {
           console.log('Face Login successful:', auth.user);
           const token = typeof auth.token === "string" ? auth.token.trim() : "";
           if (!token) {
-            setError("Resposta inválida do login (token ausente).");
+            setPopupKind("error");
+            setError(t("login.invalidResponseTokenMissing"));
             return;
           }
           const ok = storeSession(auth.user, token);
           if (!ok) {
-            setError("Não foi possível salvar a sessão (storage bloqueado). Tente outro navegador ou desative modo privado.");
+            setPopupKind("error");
+            setError(t("login.storageBlocked"));
             return;
           }
           navigate('/dashboard', { replace: true });
@@ -139,6 +155,7 @@ const LoginPage: React.FC = () => {
             }
             return null;
           })();
+          setPopupKind("error");
           setError(maybeMessage || t("login.faceNotRecognized"));
           setLoading(false);
         }
@@ -149,6 +166,7 @@ const LoginPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setPopupKind("error");
     setLoading(true);
 
     try {
@@ -161,12 +179,14 @@ const LoginPage: React.FC = () => {
       console.log('Login successful:', auth.user);
       const token = typeof auth.token === "string" ? auth.token.trim() : "";
       if (!token) {
-        setError("Resposta inválida do login (token ausente).");
+        setPopupKind("error");
+        setError(t("login.invalidResponseTokenMissing"));
         return;
       }
       const ok = storeSession(auth.user, token);
       if (!ok) {
-        setError("Não foi possível salvar a sessão (storage bloqueado). Tente outro navegador ou desative modo privado.");
+        setPopupKind("error");
+        setError(t("login.storageBlocked"));
         return;
       }
       navigate('/dashboard', { replace: true });
@@ -184,7 +204,8 @@ const LoginPage: React.FC = () => {
         }
         return null;
       })();
-      const errorMessage = maybeMessage || 'We are having communications problems, please wait some minutes. If the problem persists, send a email to liquidly@gmail.com';
+      const errorMessage = maybeMessage || t("error.internal");
+      setPopupKind("error");
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -207,8 +228,8 @@ const LoginPage: React.FC = () => {
           </h2>
           
           {error && (
-            <div className="error-popup">
-              <div className="error-popup-content">
+            <div className={popupKind === "success" ? "success-popup" : "error-popup"}>
+              <div className={popupKind === "success" ? "success-popup-content" : "error-popup-content"}>
                 {error}
               </div>
             </div>

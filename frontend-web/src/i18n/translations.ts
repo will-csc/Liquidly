@@ -29,9 +29,15 @@ export const translations: Record<Language, Translations> = {
     "login.jobDone": "Let’s get this job done!",
     "login.faceNotRecognized": "Face not recognized. Please try again or use password.",
     "login.cameraPermissionError": "Could not access camera. Please check permissions.",
+    "login.invalidResponseTokenMissing": "Invalid login response (token missing).",
+    "login.storageBlocked": "Could not save the session (storage blocked). Try another browser or disable private mode.",
+
+    "error.internal": "We are having communications problems, please wait some minutes. If the problem persists, send a email to liquidly@gmail.com",
 
     "signup.title": "Get Started",
     "signup.signingUp": "Signing Up...",
+    "signup.success": "Account created successfully",
+    "signup.failedGeneric": "Sign Up failed. Please try again.",
     "signup.faceRegistrationOptional": "Face Registration (Optional)",
     "signup.faceConsent": "I consent to using my face for authentication",
     "signup.enableCamera": "Enable Camera",
@@ -103,9 +109,15 @@ export const translations: Record<Language, Translations> = {
     "login.jobDone": "Vamos concluir esse trabalho!",
     "login.faceNotRecognized": "Rosto não reconhecido. Tente novamente ou use senha.",
     "login.cameraPermissionError": "Não foi possível acessar a câmera. Verifique as permissões.",
+    "login.invalidResponseTokenMissing": "Resposta inválida do login (token ausente).",
+    "login.storageBlocked": "Não foi possível salvar a sessão (storage bloqueado). Tente outro navegador ou desative modo privado.",
+
+    "error.internal": "Estamos com problemas de comunicação, aguarde alguns minutos. Se o problema persistir, envie um email para liquidly@gmail.com",
 
     "signup.title": "Começar",
     "signup.signingUp": "Cadastrando...",
+    "signup.success": "Conta criada com sucesso",
+    "signup.failedGeneric": "Falha ao cadastrar. Tente novamente.",
     "signup.faceRegistrationOptional": "Cadastro Facial (Opcional)",
     "signup.faceConsent": "Eu autorizo o uso do meu rosto para autenticação",
     "signup.enableCamera": "Ativar câmera",
@@ -177,9 +189,15 @@ export const translations: Record<Language, Translations> = {
     "login.jobDone": "¡Hagamos este trabajo!",
     "login.faceNotRecognized": "Rostro no reconocido. Intenta de nuevo o usa contraseña.",
     "login.cameraPermissionError": "No se pudo acceder a la cámara. Revisa los permisos.",
+    "login.invalidResponseTokenMissing": "Respuesta inválida del inicio de sesión (falta el token).",
+    "login.storageBlocked": "No se pudo guardar la sesión (almacenamiento bloqueado). Prueba otro navegador o desactiva el modo privado.",
+
+    "error.internal": "Estamos teniendo problemas de comunicación, espera unos minutos. Si el problema continúa, envía un email a liquidly@gmail.com",
 
     "signup.title": "Comenzar",
     "signup.signingUp": "Registrando...",
+    "signup.success": "Cuenta creada con éxito",
+    "signup.failedGeneric": "No se pudo crear la cuenta. Intenta nuevamente.",
     "signup.faceRegistrationOptional": "Registro facial (Opcional)",
     "signup.faceConsent": "Acepto usar mi rostro para autenticación",
     "signup.enableCamera": "Habilitar cámara",

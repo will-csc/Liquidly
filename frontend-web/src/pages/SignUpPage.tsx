@@ -59,7 +59,7 @@ const SignUpPage: React.FC = () => {
       }
     } catch (err) {
       console.error("Error accessing camera:", err);
-      setError("Could not access camera. Please check permissions.");
+      setError(t("login.cameraPermissionError"));
       setIsCameraOpen(false);
     }
   };
@@ -153,8 +153,10 @@ const SignUpPage: React.FC = () => {
 
       const user = await authService.signup(signupData);
       console.log('Sign Up successful:', user);
-      // Auto-login or redirect to login page
-      handleNavigation('/login');
+      setIsExiting(true);
+      setTimeout(() => {
+        navigate('/login', { state: { flash: t("signup.success"), email: formData.email } });
+      }, 500);
     } catch (err: unknown) {
       console.error('Sign Up failed:', err);
       const maybeMessage = (() => {
@@ -168,7 +170,7 @@ const SignUpPage: React.FC = () => {
         }
         return null;
       })();
-      setError(maybeMessage || 'Sign Up failed. Please try again.');
+      setError(maybeMessage || t("signup.failedGeneric"));
     } finally {
       setLoading(false);
     }
