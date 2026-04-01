@@ -17,6 +17,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { theme } from '../styles/theme';
+import { useI18n } from '../i18n/i18n';
 
 // === CONFIG RÁPIDA ===
 // Frações da largura/altura útil do slide para controlar imagens
@@ -30,30 +31,31 @@ const IMG = {
 const BOTTOM_HEIGHT = 100; // altura do rodapé
 const ARROW_SIZE = 44;     // diâmetro do botão da seta
 
-const slides = [
-  {
-    key: 'slide1',
-    image: require('../assets/images/logo-liquidly.png'),
-    title: 'Liquidations, simplified',
-    subtitle: 'Here you can manage\nAll of your Liquidation\nProjects',
-  },
-  {
-    key: 'slide2',
-    image: require('../assets/images/hero-image_entry-page.png'),
-    title: 'Plan, track and close',
-    subtitle: 'Projects with full visibility in one place.',
-  },
-  {
-    key: 'slide3',
-    image: require('../assets/images/dash.png'), // PNG transparente 2x2
-    title: 'Track KPIs and priorities',
-    subtitle: 'Keep everything on one clean, simple dashboard.',
-  },
-];
-
 const Entry = ({ navigation }: any) => {
+  const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
+
+  const slides = [
+    {
+      key: 'slide1',
+      image: require('../assets/images/logo-liquidly.png'),
+      title: t('entry.slide1.title'),
+      subtitle: t('entry.slide1.subtitle'),
+    },
+    {
+      key: 'slide2',
+      image: require('../assets/images/hero-image_entry-page.png'),
+      title: t('entry.slide2.title'),
+      subtitle: t('entry.slide2.subtitle'),
+    },
+    {
+      key: 'slide3',
+      image: require('../assets/images/dash.png'),
+      title: t('entry.slide3.title'),
+      subtitle: t('entry.slide3.subtitle'),
+    },
+  ];
 
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -107,7 +109,7 @@ const Entry = ({ navigation }: any) => {
 
       {/* Skip */}
       <TouchableOpacity style={styles.skipButton} onPress={goToSignIn}>
-        <Text style={styles.skipText}>Skip</Text>
+        <Text style={styles.skipText}>{t('entry.skip')}</Text>
       </TouchableOpacity>
 
       {/* ===== CARROSSEL ===== */}
@@ -166,7 +168,7 @@ const Entry = ({ navigation }: any) => {
               { left: 8, top: arrowTop, opacity: canPrev ? 1 : 0.3 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Slide anterior"
+            accessibilityLabel={t('entry.a11y.prevSlide')}
           >
             <Text style={styles.arrowText}>‹</Text>
           </TouchableOpacity>
@@ -179,7 +181,7 @@ const Entry = ({ navigation }: any) => {
               { right: 8, top: arrowTop, opacity: canNext ? 1 : 0.3 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Próximo slide"
+            accessibilityLabel={t('entry.a11y.nextSlide')}
           >
             <Text style={styles.arrowText}>›</Text>
           </TouchableOpacity>
@@ -197,7 +199,7 @@ const Entry = ({ navigation }: any) => {
               activeIndex === index && styles.dotActive,
             ]}
             accessibilityRole="button"
-            accessibilityLabel={`Ir para o slide ${index + 1}`}
+            accessibilityLabel={t('entry.a11y.goToSlide', { index: index + 1 })}
           />
         ))}
       </View>
@@ -205,14 +207,14 @@ const Entry = ({ navigation }: any) => {
       {/* ===== Rodapé ===== */}
       <View style={[styles.bottomContainer, { paddingBottom: insets.bottom }]}>
         <TouchableOpacity style={styles.signInButton} onPress={goToSignIn}>
-          <Text style={styles.signInText}>Sign In</Text>
+          <Text style={styles.signInText}>{t('entry.signIn')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.signUpButton}
           onPress={() => navigation.navigate('SignUp')}
         >
-          <Text style={styles.signUpText}>Sign Up</Text>
+          <Text style={styles.signUpText}>{t('entry.signUp')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -18,11 +18,14 @@ import Report from '../screens/Report';
 
 import { theme } from '../styles/theme';
 import { userStorage } from '../services/userStorage';
+import { useI18n } from '../i18n/i18n';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const MainTabs = () => {
+  const { t } = useI18n();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -46,13 +49,25 @@ const MainTabs = () => {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Dashboard" component={Dashboard} />
-      <Tab.Screen name="Conversions" component={Conversions} />
-      <Tab.Screen name="BOM" component={BOM} />
-      <Tab.Screen 
-        name="Report" 
-        component={Report} 
-        options={{ title: 'Report' }}
+      <Tab.Screen
+        name="Dashboard"
+        component={Dashboard}
+        options={{ title: t('nav.home'), tabBarLabel: t('nav.home') }}
+      />
+      <Tab.Screen
+        name="Conversions"
+        component={Conversions}
+        options={{ title: t('nav.conversions'), tabBarLabel: t('nav.conversions') }}
+      />
+      <Tab.Screen
+        name="BOM"
+        component={BOM}
+        options={{ title: t('nav.bom'), tabBarLabel: t('nav.bom') }}
+      />
+      <Tab.Screen
+        name="Report"
+        component={Report}
+        options={{ title: t('nav.report'), tabBarLabel: t('nav.report') }}
       />
     </Tab.Navigator>
   );

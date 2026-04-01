@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SignUp from '../SignUp';
+import { I18nProvider } from '../../../src/i18n/I18nProvider';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
@@ -20,28 +21,30 @@ const initialMetrics = {
 
 const renderSignUp = () =>
   render(
-    <SafeAreaProvider initialMetrics={initialMetrics as any}>
-      <SignUp navigation={mockNavigation} />
-    </SafeAreaProvider>
+    <I18nProvider>
+      <SafeAreaProvider initialMetrics={initialMetrics as any}>
+        <SignUp navigation={mockNavigation} />
+      </SafeAreaProvider>
+    </I18nProvider>
   );
 
 describe('SignUp Screen', () => {
   it('renders correctly', () => {
     const { getByText } = renderSignUp();
     
-    expect(getByText('Get Started')).toBeTruthy();
-    expect(getByText('Name')).toBeTruthy();
+    expect(getByText('Começar')).toBeTruthy();
+    expect(getByText('Nome')).toBeTruthy();
     expect(getByText('Email')).toBeTruthy();
-    expect(getByText('Company')).toBeTruthy();
-    expect(getByText('Password')).toBeTruthy();
-    expect(getByText('Sign-Up')).toBeTruthy();
-    expect(getByText('Sign In')).toBeTruthy();
+    expect(getByText('Empresa')).toBeTruthy();
+    expect(getByText('Senha')).toBeTruthy();
+    expect(getByText('Cadastrar')).toBeTruthy();
+    expect(getByText('Entrar')).toBeTruthy();
   });
 
   it('navigates to SignIn when Sign In link is pressed', () => {
     const { getByText } = renderSignUp();
     
-    fireEvent.press(getByText('Sign In'));
+    fireEvent.press(getByText('Entrar'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('SignIn');
   });
 

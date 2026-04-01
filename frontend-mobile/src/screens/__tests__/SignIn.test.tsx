@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { I18nProvider } from '../../../src/i18n/I18nProvider';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -20,13 +21,17 @@ const mockNavigation = {
 
 describe('SignIn Screen', () => {
   it('renders correctly', () => {
-    const { getByText, getByPlaceholderText } = render(<SignIn navigation={mockNavigation} />);
+    const { getByText } = render(
+      <I18nProvider>
+        <SignIn navigation={mockNavigation} />
+      </I18nProvider>
+    );
     
-    expect(getByText('Welcome Back')).toBeTruthy();
+    expect(getByText('Bem-vindo de volta')).toBeTruthy();
     expect(getByText('Email')).toBeTruthy();
-    expect(getByText('Password')).toBeTruthy();
+    expect(getByText('Senha')).toBeTruthy();
     expect(getByText('Login')).toBeTruthy();
-    expect(getByText('Sign-Up')).toBeTruthy();
+    expect(getByText('Cadastrar')).toBeTruthy();
   });
 
   it('navigates back to Entry when Back button is pressed', () => {
@@ -43,9 +48,13 @@ describe('SignIn Screen', () => {
   });
   
   it('navigates to SignUp when Sign-Up button is pressed', () => {
-    const { getByText } = render(<SignIn navigation={mockNavigation} />);
+    const { getByText } = render(
+      <I18nProvider>
+        <SignIn navigation={mockNavigation} />
+      </I18nProvider>
+    );
     
-    fireEvent.press(getByText('Sign-Up'));
+    fireEvent.press(getByText('Cadastrar'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('SignUp');
   });
 });

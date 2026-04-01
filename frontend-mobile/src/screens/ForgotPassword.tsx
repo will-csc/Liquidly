@@ -17,8 +17,10 @@ import BackButton from '../components/BackButton';
 import ScreenLayout from '../components/ScreenLayout';
 import { authService } from '../services/api';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
+import { useI18n } from '../i18n/i18n';
 
 const ForgotPassword = ({ navigation }: any) => {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -41,7 +43,7 @@ const ForgotPassword = ({ navigation }: any) => {
 
   const handleSendCode = async () => {
     if (!email) {
-      setErrorMessage('Please enter your email');
+      setErrorMessage(t('forgot.enterEmail'));
       return;
     }
 
@@ -49,16 +51,16 @@ const ForgotPassword = ({ navigation }: any) => {
     try {
       const exists = await authService.emailExists(email);
       if (!exists) {
-        setErrorMessage('Email not found');
+        setErrorMessage(t('forgot.emailNotFound'));
         return;
       }
 
       await authService.sendRecoveryCode(email);
       setCodeSent(true);
-      Alert.alert('Success', 'A recovery code was sent to your email');
+      Alert.alert(t('forgot.codeSentTitle'), t('forgot.codeSentBody'));
     } catch (error: any) {
       console.error('Failed to send recovery code:', error);
-      setErrorMessage(getErrorMessage(error, 'Failed to send recovery code'));
+      setErrorMessage(getErrorMessage(error, t('forgot.sendCodeFailed')));
     } finally {
       setLoading(false);
     }
@@ -66,23 +68,23 @@ const ForgotPassword = ({ navigation }: any) => {
 
   const handleReset = async () => {
     if (!email || !code || !newPassword) {
-      setErrorMessage('Please fill in all fields');
+      setErrorMessage(t('login.fillAllFields'));
       return;
     }
     if (!isPasswordValid) {
-      setErrorMessage('Password does not meet the requirements');
+      setErrorMessage(t('forgot.passwordRequirementsFailed'));
       return;
     }
 
     setLoading(true);
     try {
       await authService.resetPassword({ email, code, newPassword });
-      Alert.alert('Success', 'Password updated. Please log in.', [
-        { text: 'OK', onPress: () => navigation.navigate('SignIn') }
+      Alert.alert(t('forgot.resetSuccessTitle'), t('forgot.resetSuccessBody'), [
+        { text: t('common.ok'), onPress: () => navigation.navigate('SignIn') }
       ]);
     } catch (error: any) {
       console.error('Failed to reset password:', error);
-      setErrorMessage(getErrorMessage(error, 'Failed to reset password'));
+      setErrorMessage(getErrorMessage(error, t('forgot.resetFailed')));
     } finally {
       setLoading(false);
     }
@@ -105,11 +107,11 @@ const ForgotPassword = ({ navigation }: any) => {
           style={styles.keyboardAvoidingView}
       >
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-              <Text style={styles.title}>Reset your password</Text>
+              <Text style={styles.title}>{t('forgot.title')}</Text>
               
               <Input
-                label="Email"
-                placeholder="Email"
+                label={t('common.email')}
+                placeholder={t('common.email')}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -120,7 +122,7 @@ const ForgotPassword = ({ navigation }: any) => {
               {codeSent && (
                 <>
                   <Input
-                    label="New Password"
+                    label={t('forgot.newPasswordLabel')}
                     value={newPassword}
                     onChangeText={setNewPassword}
                     secureTextEntry
@@ -140,7 +142,7 @@ const ForgotPassword = ({ navigation }: any) => {
                     ))}
                   </View>
                   <Input
-                    label="Code Sent on Your Email"
+                    label={t('forgot.codeLabel')}
                     value={code}
                     onChangeText={setCode}
                     keyboardType="number-pad"
@@ -150,14 +152,14 @@ const ForgotPassword = ({ navigation }: any) => {
 
               {!codeSent ? (
                 <Button
-                  title={loading ? 'Sending...' : 'Send Code'}
+                  title={loading ? t('forgot.sending') : t('forgot.sendCode')}
                   onPress={handleSendCode}
                   variant="primary"
                   disabled={loading}
                 />
               ) : (
                 <Button
-                  title={loading ? 'Resetting...' : 'Reset'}
+                  title={loading ? t('forgot.resetting') : t('forgot.reset')}
                   onPress={handleReset}
                   variant="primary"
                   disabled={loading}
@@ -165,23 +167,23 @@ const ForgotPassword = ({ navigation }: any) => {
               )}
 
               <Button
-                title="Login"
+                title={t('forgot.login')}
                 onPress={() => navigation.navigate('SignIn')}
                 variant="secondary"
               />
 
               <TouchableOpacity style={styles.footerLinkContainer} onPress={() => {}}>
                   <Text style={styles.footerLinkText}>
-                      Problems recovering your account?
+                      {t('forgot.supportLine1')}
                   </Text>
                   <Text style={[styles.footerLinkText, styles.footerLinkUnderline]}>
-                      send us an email explaining the situation
+                      {t('forgot.supportLine2')}
                   </Text>
               </TouchableOpacity>
 
           </ScrollView>
       </KeyboardAvoidingView>
-      <ErrorOverlay message={errorMessage} title="Error" onClose={() => setErrorMessage(null)} />
+      <ErrorOverlay message={errorMessage} title={t('common.error')} onClose={() => setErrorMessage(null)} />
     </ScreenLayout>
   );
 };

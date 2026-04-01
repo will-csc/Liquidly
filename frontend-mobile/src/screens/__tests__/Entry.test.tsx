@@ -2,6 +2,16 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Entry from '../Entry';
+import { I18nProvider } from '../../../src/i18n/I18nProvider';
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(async () => null),
+    setItem: jest.fn(async () => undefined),
+    removeItem: jest.fn(async () => undefined),
+  }
+}));
 
 // Mock navigation
 const mockNavigation = {
@@ -15,9 +25,11 @@ const initialMetrics = {
 
 const renderEntry = () =>
   render(
-    <SafeAreaProvider initialMetrics={initialMetrics as any}>
-      <Entry navigation={mockNavigation} />
-    </SafeAreaProvider>
+    <I18nProvider>
+      <SafeAreaProvider initialMetrics={initialMetrics as any}>
+        <Entry navigation={mockNavigation} />
+      </SafeAreaProvider>
+    </I18nProvider>
   );
 
 describe('Entry Screen', () => {
@@ -28,23 +40,23 @@ describe('Entry Screen', () => {
   it('renders correctly', () => {
     const { getByText } = renderEntry();
     
-    expect(getByText('Skip')).toBeTruthy();
-    expect(getByText('Liquidations, simplified')).toBeTruthy();
-    expect(getByText('Sign In')).toBeTruthy();
-    expect(getByText('Sign Up')).toBeTruthy();
+    expect(getByText('Pular')).toBeTruthy();
+    expect(getByText('Liquidações, simplificadas')).toBeTruthy();
+    expect(getByText('Entrar')).toBeTruthy();
+    expect(getByText('Cadastrar')).toBeTruthy();
   });
 
   it('navigates to SignIn when Sign In button is pressed', () => {
     const { getByText } = renderEntry();
     
-    fireEvent.press(getByText('Sign In'));
+    fireEvent.press(getByText('Entrar'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('SignIn');
   });
 
   it('navigates to SignUp when Sign Up button is pressed', () => {
     const { getByText } = renderEntry();
     
-    fireEvent.press(getByText('Sign Up'));
+    fireEvent.press(getByText('Cadastrar'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('SignUp');
   });
 });

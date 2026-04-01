@@ -21,8 +21,10 @@ import BackButton from '../components/BackButton';
 import ScreenLayout from '../components/ScreenLayout';
 import { authService } from '../services/api';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
+import { useI18n } from '../i18n/i18n';
 
 const SignUp = ({ navigation }: any) => {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
@@ -54,7 +56,7 @@ const SignUp = ({ navigation }: any) => {
     if (!permission?.granted) {
       const result = await requestPermission();
       if (!result.granted) {
-        setErrorMessage('Camera permission is required to take a photo.');
+        setErrorMessage(t('signup.permissionRequiredPhoto'));
         return;
       }
     }
@@ -71,19 +73,19 @@ const SignUp = ({ navigation }: any) => {
         }
       } catch (e) {
         console.error(e);
-        setErrorMessage('Failed to take picture');
+        setErrorMessage(t('signup.takePictureFailed'));
       }
     }
   };
 
   const handleSignUp = async () => {
     if (!name || !email || !company || !password) {
-      setErrorMessage('Please fill in all fields');
+      setErrorMessage(t('signup.fillAllFields'));
       return;
     }
 
     if (!isPasswordValid) {
-      setErrorMessage('Password does not meet the requirements');
+      setErrorMessage(t('signup.passwordRequirementsFailed'));
       return;
     }
 
@@ -96,12 +98,12 @@ const SignUp = ({ navigation }: any) => {
         companyName: company,
         faceImage: faceImage || undefined
       });
-      Alert.alert('Success', 'Account created! Please log in.', [
-        { text: 'OK', onPress: () => navigation.navigate('SignIn') }
+      Alert.alert(t('signup.successTitle'), t('signup.successBody'), [
+        { text: t('common.ok'), onPress: () => navigation.navigate('SignIn') }
       ]);
     } catch (error: any) {
       console.error('Sign up failed:', error);
-      setErrorMessage(getErrorMessage(error, 'Failed to create account'));
+      setErrorMessage(getErrorMessage(error, t('signup.createFailed')));
     } finally {
       setLoading(false);
     }
@@ -121,13 +123,13 @@ const SignUp = ({ navigation }: any) => {
                   onPress={() => setIsCameraVisible(false)}
                   style={{ padding: 15, backgroundColor: 'red', borderRadius: 8 }}
                 >
-                  <Text style={{ color: 'white', fontWeight: 'bold' }}>Cancel</Text>
+                  <Text style={{ color: 'white', fontWeight: 'bold' }}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   onPress={takePicture}
                   style={{ padding: 15, backgroundColor: theme.colors.primary, borderRadius: 8 }}
                 >
-                  <Text style={{ color: 'white', fontWeight: 'bold' }}>Capture Face</Text>
+                  <Text style={{ color: 'white', fontWeight: 'bold' }}>{t('signup.captureFace')}</Text>
                 </TouchableOpacity>
              </View>
           </View>
@@ -161,17 +163,17 @@ const SignUp = ({ navigation }: any) => {
           style={styles.keyboardAvoidingView}
       >
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-              <Text style={styles.title}>Get Started</Text>
+              <Text style={styles.title}>{t('signup.title')}</Text>
               
               <Input
-                label="Name"
+                label={t('common.name')}
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
               />
 
               <Input
-                label="Email"
+                label={t('common.email')}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -179,14 +181,14 @@ const SignUp = ({ navigation }: any) => {
               />
 
               <Input
-                label="Company"
+                label={t('common.company')}
                 value={company}
                 onChangeText={setCompany}
                 autoCapitalize="words"
               />
 
               <Input
-                label="Password"
+                label={t('common.password')}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -209,7 +211,7 @@ const SignUp = ({ navigation }: any) => {
 
               {/* Camera Trigger */}
               <View style={{ marginVertical: 10 }}>
-                <Text style={{ color: theme.colors.textLight, marginBottom: 5 }}>Face Registration (Optional)</Text>
+                <Text style={{ color: theme.colors.textLight, marginBottom: 5 }}>{t('signup.faceRegistrationOptional')}</Text>
                 
                 {!faceImage && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
@@ -220,7 +222,7 @@ const SignUp = ({ navigation }: any) => {
                       thumbColor={consentGiven ? "#f4f3f4" : "#f4f3f4"}
                     />
                     <Text style={{ marginLeft: 10, color: theme.colors.textLight, fontSize: 14 }}>
-                      I consent to using my face for authentication
+                      {t('signup.faceConsent')}
                     </Text>
                   </View>
                 )}
@@ -229,7 +231,7 @@ const SignUp = ({ navigation }: any) => {
                   <View style={{ alignItems: 'center' }}>
                     <Image source={{ uri: faceImage }} style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 10 }} />
                     <TouchableOpacity onPress={() => setFaceImage(null)}>
-                      <Text style={{ color: 'red' }}>Remove Photo</Text>
+                      <Text style={{ color: 'red' }}>{t('signup.removePhoto')}</Text>
                     </TouchableOpacity>
                   </View>
                 ) : consentGiven ? (
@@ -244,13 +246,13 @@ const SignUp = ({ navigation }: any) => {
                       borderColor: '#ddd'
                     }}
                   >
-                    <Text style={{ color: theme.colors.text }}>Tap to Take Photo</Text>
+                    <Text style={{ color: theme.colors.text }}>{t('signup.tapToTakePhoto')}</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
 
               <Button
-                title={loading ? "Signing up..." : "Sign-Up"}
+                title={loading ? t('signup.signingUp') : t('common.signup')}
                 onPress={handleSignUp}
                 variant="primary"
                 disabled={loading}
@@ -258,12 +260,15 @@ const SignUp = ({ navigation }: any) => {
 
               <View style={styles.signInContainer}>
                   <Text style={styles.signInText}>
-                      Already have an account? <Text style={styles.signInLink} onPress={() => navigation.navigate('SignIn')}>Sign In</Text>
+                      {t('signup.alreadyHaveAccount')}{' '}
+                      <Text style={styles.signInLink} onPress={() => navigation.navigate('SignIn')}>
+                        {t('entry.signIn')}
+                      </Text>
                   </Text>
               </View>
           </ScrollView>
       </KeyboardAvoidingView>
-      <ErrorOverlay message={errorMessage} title="Sign Up Failed" onClose={() => setErrorMessage(null)} />
+      <ErrorOverlay message={errorMessage} title={t('signup.failedTitle')} onClose={() => setErrorMessage(null)} />
     </ScreenLayout>
   );
 };

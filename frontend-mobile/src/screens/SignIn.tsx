@@ -20,8 +20,10 @@ import ScreenLayout from '../components/ScreenLayout';
 import { authService } from '../services/api';
 import { userStorage } from '../services/userStorage';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
+import { useI18n } from '../i18n/i18n';
 
 const SignIn = ({ navigation }: any) => {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -37,7 +39,7 @@ const SignIn = ({ navigation }: any) => {
     if (!permission?.granted) {
       const result = await requestPermission();
       if (!result.granted) {
-        setErrorMessage('Camera permission is required for Face Login.');
+        setErrorMessage(t('login.permissionRequiredFace'));
         return;
       }
     }
@@ -58,21 +60,21 @@ const SignIn = ({ navigation }: any) => {
             navigation.replace('Main');
           } catch (error: any) {
             console.error('Face Login failed:', error);
-            setErrorMessage(getErrorMessage(error, 'Face not recognized'));
+            setErrorMessage(getErrorMessage(error, t('login.invalidCredentials')));
           } finally {
             setLoading(false);
           }
         }
       } catch (e) {
         console.error(e);
-        setErrorMessage('Failed to capture photo');
+        setErrorMessage(t('login.captureFailed'));
       }
     }
   };
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setErrorMessage('Please fill in all fields');
+      setErrorMessage(t('login.fillAllFields'));
       return;
     }
 
@@ -84,7 +86,7 @@ const SignIn = ({ navigation }: any) => {
       navigation.replace('Main');
     } catch (error: any) {
       console.error('Login failed:', error);
-      setErrorMessage(getErrorMessage(error, 'Invalid credentials or network error'));
+      setErrorMessage(getErrorMessage(error, t('login.invalidCredentials')));
     } finally {
       setLoading(false);
     }
@@ -104,13 +106,13 @@ const SignIn = ({ navigation }: any) => {
                   onPress={() => setIsCameraVisible(false)}
                   style={{ padding: 15, backgroundColor: 'red', borderRadius: 8 }}
                 >
-                  <Text style={{ color: 'white', fontWeight: 'bold' }}>Cancel</Text>
+                  <Text style={{ color: 'white', fontWeight: 'bold' }}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   onPress={takePictureAndLogin}
                   style={{ padding: 15, backgroundColor: theme.colors.primary, borderRadius: 8 }}
                 >
-                  <Text style={{ color: 'white', fontWeight: 'bold' }}>Login</Text>
+                  <Text style={{ color: 'white', fontWeight: 'bold' }}>{t('common.login')}</Text>
                 </TouchableOpacity>
              </View>
           </View>
@@ -142,10 +144,10 @@ const SignIn = ({ navigation }: any) => {
           style={styles.keyboardAvoidingView}
       >
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.title}>{t('login.welcomeBack')}</Text>
               
               <Input
-                label="Email"
+                label={t('common.email')}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -153,7 +155,7 @@ const SignIn = ({ navigation }: any) => {
               />
 
               <Input
-                label="Password"
+                label={t('common.password')}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -169,7 +171,7 @@ const SignIn = ({ navigation }: any) => {
               />
 
               <Button
-                title={loading ? "Logging in..." : "Login"}
+                title={loading ? t('login.loggingIn') : t('common.login')}
                 onPress={handleLogin}
                 variant="primary"
                 disabled={loading}
@@ -186,24 +188,25 @@ const SignIn = ({ navigation }: any) => {
                     style={styles.faceLoginIcon}
                     resizeMode="contain"
                   />
-                  <Text style={styles.faceLoginText}>Login with Face</Text>
+                  <Text style={styles.faceLoginText}>{t('login.loginWithFace')}</Text>
                 </View>
               </TouchableOpacity>
 
               <Button
-                title="Sign-Up"
+                title={t('common.signup')}
                 onPress={() => navigation.navigate('SignUp')}
                 variant="secondary"
               />
 
               <TouchableOpacity style={styles.forgotPasswordContainer} onPress={() => navigation.navigate('ForgotPassword')}>
                   <Text style={styles.forgotPasswordText}>
-                      Forgot your password? <Text style={styles.clickHereText}>Click Here</Text>
+                      {t('login.forgotPassword')}{' '}
+                      <Text style={styles.clickHereText}>{t('login.clickHere')}</Text>
                   </Text>
               </TouchableOpacity>
           </ScrollView>
       </KeyboardAvoidingView>
-      <ErrorOverlay message={errorMessage} title="Login Failed" onClose={() => setErrorMessage(null)} />
+      <ErrorOverlay message={errorMessage} title={t('login.failedTitle')} onClose={() => setErrorMessage(null)} />
     </ScreenLayout>
   );
 };
