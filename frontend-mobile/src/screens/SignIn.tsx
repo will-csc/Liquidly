@@ -14,7 +14,9 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../styles/theme';
 import Button from '../components/Button';
+import FaceLoginButton from '../components/FaceLoginButton';
 import Input from '../components/Input';
+import InlineLinkText from '../components/InlineLinkText';
 import BackButton from '../components/BackButton';
 import ScreenLayout from '../components/ScreenLayout';
 import { authService } from '../services/api';
@@ -177,20 +179,12 @@ const SignIn = ({ navigation }: any) => {
                 disabled={loading}
               />
 
-              <TouchableOpacity 
+              <FaceLoginButton
+                label={t('login.loginWithFace')}
                 onPress={startCamera}
                 disabled={loading}
-                style={styles.faceLoginButton}
-              >
-                <View style={styles.faceLoginContent}>
-                  <Image
-                    source={require('../assets/images/camera-icon.png')}
-                    style={styles.faceLoginIcon}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.faceLoginText}>{t('login.loginWithFace')}</Text>
-                </View>
-              </TouchableOpacity>
+                icon={require('../assets/images/camera-icon.png')}
+              />
 
               <Button
                 title={t('common.signup')}
@@ -198,12 +192,13 @@ const SignIn = ({ navigation }: any) => {
                 variant="secondary"
               />
 
-              <TouchableOpacity style={styles.forgotPasswordContainer} onPress={() => navigation.navigate('ForgotPassword')}>
-                  <Text style={styles.forgotPasswordText}>
-                      {t('login.forgotPassword')}{' '}
-                      <Text style={styles.clickHereText}>{t('login.clickHere')}</Text>
-                  </Text>
-              </TouchableOpacity>
+              <View style={styles.forgotPasswordContainer}>
+                <InlineLinkText
+                  text={t('login.forgotPassword')}
+                  linkText={t('login.clickHere')}
+                  onPressLink={() => navigation.navigate('ForgotPassword')}
+                />
+              </View>
           </ScrollView>
       </KeyboardAvoidingView>
       <ErrorOverlay message={errorMessage} title={t('login.failedTitle')} onClose={() => setErrorMessage(null)} />
@@ -246,40 +241,6 @@ const styles = StyleSheet.create({
   forgotPasswordContainer: {
     marginTop: 20,
     alignItems: 'center',
-  },
-  forgotPasswordText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  clickHereText: {
-    color: theme.colors.primary,
-    fontWeight: 'bold',
-    textDecorationLine: 'underline',
-  },
-  faceLoginButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: theme.borderRadius.l,
-    alignItems: 'center',
-    marginVertical: 10,
-    width: '100%',
-  },
-  faceLoginContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  faceLoginIcon: {
-    width: 22,
-    height: 22,
-    marginRight: 10,
-    tintColor: theme.colors.white,
-  },
-  faceLoginText: {
-    color: theme.colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
 

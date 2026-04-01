@@ -5,10 +5,7 @@
 import React, { useRef, useState } from 'react';
 import {
   View,
-  Text,
-  Image,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   useWindowDimensions,
   NativeSyntheticEvent,
@@ -16,8 +13,13 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { theme } from '../styles/theme';
 import { useI18n } from '../i18n/i18n';
+import EntryBottomActions from '../components/EntryBottomActions';
+import EntrySkipButton from '../components/EntrySkipButton';
+import OnboardingArrowButton from '../components/OnboardingArrowButton';
+import OnboardingPagination from '../components/OnboardingPagination';
+import OnboardingSlide from '../components/OnboardingSlide';
+import { theme } from '../styles/theme';
 
 // === CONFIG RÁPIDA ===
 // Frações da largura/altura útil do slide para controlar imagens
@@ -107,10 +109,7 @@ const Entry = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
-      {/* Skip */}
-      <TouchableOpacity style={styles.skipButton} onPress={goToSignIn}>
-        <Text style={styles.skipText}>{t('entry.skip')}</Text>
-      </TouchableOpacity>
+      <EntrySkipButton label={t('entry.skip')} onPress={goToSignIn} />
 
       {/* ===== CARROSSEL ===== */}
       <View style={styles.carouselWrap}>
@@ -135,88 +134,58 @@ const Entry = ({ navigation }: any) => {
               (isThird ? IMG.thirdH : IMG.defaultH) * slideHeight;
 
             return (
-              <View
+              <OnboardingSlide
                 key={slide.key}
-                style={[
-                  styles.slide,
-                  { width: pageWidth, height: slideHeight },
-                ]}
-              >
-                <Image
-                  source={slide.image}
-                  resizeMode="contain"
-                  style={[
-                    { width: imgWidth, maxHeight: maxImgHeight },
-                    slide.key === 'slide1' && { tintColor: theme.colors.primary },
-                  ]}
-                />
-
-                <Text style={styles.slideTitle}>{slide.title}</Text>
-                <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
-              </View>
+                pageWidth={pageWidth}
+                slideHeight={slideHeight}
+                image={slide.image}
+                imageWidth={imgWidth}
+                maxImageHeight={maxImgHeight}
+                tintPrimary={slide.key === 'slide1'}
+                title={slide.title}
+                subtitle={slide.subtitle}
+              />
             );
           })}
         </ScrollView>
 
         {/* ===== SETAS SOBREPOSTAS (sem colunas, sem barras) ===== */}
         <View style={styles.arrowsOverlay} pointerEvents="box-none">
-          <TouchableOpacity
-            onPress={goPrev}
+          <OnboardingArrowButton
+            direction="prev"
+            top={arrowTop}
             disabled={!canPrev}
-            style={[
-              styles.arrowButton,
-              { left: 8, top: arrowTop, opacity: canPrev ? 1 : 0.3 },
-            ]}
-            accessibilityRole="button"
+            onPress={goPrev}
             accessibilityLabel={t('entry.a11y.prevSlide')}
-          >
-            <Text style={styles.arrowText}>‹</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={goNext}
+          />
+          <OnboardingArrowButton
+            direction="next"
+            top={arrowTop}
             disabled={!canNext}
-            style={[
-              styles.arrowButton,
-              { right: 8, top: arrowTop, opacity: canNext ? 1 : 0.3 },
-            ]}
-            accessibilityRole="button"
+            onPress={goNext}
             accessibilityLabel={t('entry.a11y.nextSlide')}
-          >
-            <Text style={styles.arrowText}>›</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
 
       {/* ===== Paginação (bolinhas) ===== */}
-      <View style={[styles.pagination, { bottom: BOTTOM_HEIGHT + 10 }]}>
-        {slides.map((_, index) => (
-          <TouchableOpacity
-            key={index}
-            onPress={() => goTo(index)}
-            style={[
-              styles.dot,
-              activeIndex === index && styles.dotActive,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t('entry.a11y.goToSlide', { index: index + 1 })}
-          />
-        ))}
-      </View>
+      <OnboardingPagination
+        count={slides.length}
+        activeIndex={activeIndex}
+        bottom={BOTTOM_HEIGHT + 10}
+        onSelect={goTo}
+        getAccessibilityLabel={(i) => t('entry.a11y.goToSlide', { index: i + 1 })}
+      />
 
       {/* ===== Rodapé ===== */}
-      <View style={[styles.bottomContainer, { paddingBottom: insets.bottom }]}>
-        <TouchableOpacity style={styles.signInButton} onPress={goToSignIn}>
-          <Text style={styles.signInText}>{t('entry.signIn')}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.signUpButton}
-          onPress={() => navigation.navigate('SignUp')}
-        >
-          <Text style={styles.signUpText}>{t('entry.signUp')}</Text>
-        </TouchableOpacity>
-      </View>
+      <EntryBottomActions
+        height={BOTTOM_HEIGHT}
+        bottomInset={insets.bottom}
+        signInLabel={t('entry.signIn')}
+        signUpLabel={t('entry.signUp')}
+        onSignIn={goToSignIn}
+        onSignUp={() => navigation.navigate('SignUp')}
+      />
     </SafeAreaView>
   );
 };
@@ -228,31 +197,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
 
-  skipButton: {
-    position: 'absolute',
-    top: 24,
-    right: 20,
-    zIndex: 3,
-  },
-  skipText: {
-    color: theme.colors.secondary,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-
   // Wrapper do carrossel — posição relativa para podermos SOBREPOR as setas
   carouselWrap: {
     flex: 1,
     position: 'relative',
-  },
-
-  // Cada slide/página (sem overlay lateral e sem colunas)
-  slide: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.l,
-    paddingVertical: theme.spacing.xl,
-    overflow: 'hidden', // evita glitches no Web
   },
 
   // Overlay das setas: não ocupa layout, não cria colunas, não desenha barras
@@ -260,93 +208,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
     zIndex: 2,
-  },
-  arrowButton: {
-    position: 'absolute',
-    width: ARROW_SIZE,
-    height: ARROW_SIZE,
-    borderRadius: ARROW_SIZE / 2,
-    backgroundColor: 'rgba(0,0,0,0.06)', // círculo suave, sem barra lateral
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arrowText: {
-    color: theme.colors.primary,
-    fontSize: 26,
-    fontWeight: '900',
-    lineHeight: 26,
-  },
-
-  // Título e subtítulo
-  slideTitle: {
-    fontSize: theme.fontSize.xxxl,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    textAlign: 'center',
-    marginTop: theme.spacing.m,
-    marginBottom: theme.spacing.s,
-  },
-  slideSubtitle: {
-    fontSize: theme.fontSize.xl,
-    color: theme.colors.secondary,
-    textAlign: 'center',
-    lineHeight: 26,
-    maxWidth: '80%',
-  },
-
-  // Paginação
-  pagination: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 2,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#ccc',
-    marginHorizontal: 6,
-  },
-  dotActive: {
-    backgroundColor: theme.colors.primary,
-    transform: [{ scale: 1.15 }],
-  },
-
-  // Rodapé
-  bottomContainer: {
-    flexDirection: 'row',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: BOTTOM_HEIGHT,
-    backgroundColor: theme.colors.background,
-  },
-  signInButton: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-  },
-  signInText: {
-    fontSize: theme.fontSize.xxl,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-  },
-  signUpButton: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primary,
-    borderTopLeftRadius: 50,
-  },
-  signUpText: {
-    fontSize: theme.fontSize.xxl,
-    fontWeight: 'bold',
-    color: theme.colors.white,
   },
 });
 

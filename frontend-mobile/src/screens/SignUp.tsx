@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { theme } from '../styles/theme';
 import Button from '../components/Button';
+import InlineLinkText from '../components/InlineLinkText';
 import Input from '../components/Input';
 import BackButton from '../components/BackButton';
 import ScreenLayout from '../components/ScreenLayout';
@@ -259,12 +260,12 @@ const SignUp = ({ navigation }: any) => {
               />
 
               <View style={styles.signInContainer}>
-                  <Text style={styles.signInText}>
-                      {t('signup.alreadyHaveAccount')}{' '}
-                      <Text style={styles.signInLink} onPress={() => navigation.navigate('SignIn')}>
-                        {t('entry.signIn')}
-                      </Text>
-                  </Text>
+                <InlineLinkText
+                  text={t('signup.alreadyHaveAccount')}
+                  linkText={t('entry.signIn')}
+                  onPressLink={() => navigation.navigate('SignIn')}
+                  style={styles.signInText}
+                />
               </View>
           </ScrollView>
       </KeyboardAvoidingView>
@@ -315,11 +316,6 @@ const styles = StyleSheet.create({
   signInText: {
     color: '#666',
     fontSize: 14,
-  },
-  signInLink: {
-    color: theme.colors.primary,
-    fontWeight: 'bold',
-    textDecorationLine: 'underline',
   },
 });
 
