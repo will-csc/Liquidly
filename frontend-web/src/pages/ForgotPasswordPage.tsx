@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/ForgotPasswordPage.css';
-import '../styles/ErrorPopup.css';
 import logoWhite from '../assets/images/logo-white.png';
 import forgotPasswordBg from '../assets/images/forgotpassword-image.png';
 import Input from '../components/Input';
 import Button from '../components/Button';
+import ErrorPopup from '../components/ErrorPopup';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { useForm } from '../hooks/useForm';
 import { authService } from '../services/api';
@@ -116,13 +116,7 @@ const ForgotPasswordPage: React.FC = () => {
         <div className={`forgot-password-form-section ${isExiting ? 'slide-out-right' : 'slide-in-right'}`}>
           <h2 className="forgot-password-title">{t("forgot.title")}</h2>
 
-          {error && (
-            <div className="error-popup">
-              <div className="error-popup-content">
-                {error}
-              </div>
-            </div>
-          )}
+          {error ? <ErrorPopup message={error} /> : null}
           
           <form onSubmit={handleSendCode} className="forgot-password-form">
             {!isCodeSent ? (

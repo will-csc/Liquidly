@@ -16,8 +16,13 @@ import { userStorage } from '../services/userStorage';
 import { Project, Bom } from '../types';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import { Ionicons } from '@expo/vector-icons';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
+import Card from '../components/Card';
+import IconNote from '../components/IconNote';
+import ModalHeader from '../components/ModalHeader';
+import ScreenHeader from '../components/ScreenHeader';
+import SelectableListItem from '../components/SelectableListItem';
+import SelectField from '../components/SelectField';
 
 interface SelectionItem {
   label: string;
@@ -126,57 +131,38 @@ const Report = () => {
     }
   };
 
-  const renderSelectionItem = ({ item }: { item: SelectionItem }) => (
-    <TouchableOpacity 
-      style={styles.modalItem} 
-      onPress={() => handleSelect(item)}
-    >
-      <Text style={styles.modalItemText}>{item.label}</Text>
-      {((currentSelectionType === 'project' && selectedProject?.value === item.value) ||
-        (currentSelectionType === 'bom' && selectedBom?.value === item.value)) && (
-        <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
-      )}
-    </TouchableOpacity>
-  );
+  const isSelected = (item: SelectionItem) =>
+    (currentSelectionType === 'project' && selectedProject?.value === item.value) ||
+    (currentSelectionType === 'bom' && selectedBom?.value === item.value);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Reports</Text>
-          <Text style={styles.headerSubtitle}>Generate detailed project reports</Text>
-        </View>
+        <ScreenHeader
+          title="Reports"
+          subtitle="Generate detailed project reports"
+          style={{ marginBottom: 20 }}
+        />
 
-        <View style={styles.card}>
-          {/* Project Selection */}
-          <Text style={styles.sectionTitle}>Project Details</Text>
-          <TouchableOpacity 
-            style={styles.selectInput} 
+        <Card style={styles.card}>
+          <SelectField
+            label="Project Details"
+            valueText={selectedProject ? selectedProject.label : undefined}
+            placeholder="Select a project..."
             onPress={() => openSelectionModal('project')}
-          >
-            <Text style={[styles.selectText, !selectedProject && styles.placeholderText]}>
-              {selectedProject ? selectedProject.label : 'Select a project...'}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color="#666" />
-          </TouchableOpacity>
+          />
 
           <View style={styles.divider} />
 
-          {/* BOM Selection */}
-          <Text style={styles.sectionTitle}>BOM Details</Text>
-          <TouchableOpacity 
-            style={styles.selectInput} 
+          <SelectField
+            label="BOM Details"
+            valueText={selectedBom ? selectedBom.label : undefined}
+            placeholder="Choose items..."
             onPress={() => openSelectionModal('bom')}
-          >
-            <Text style={[styles.selectText, !selectedBom && styles.placeholderText]}>
-              {selectedBom ? selectedBom.label : 'Choose items...'}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color="#666" />
-          </TouchableOpacity>
+          />
 
           <View style={styles.divider} />
 
-          {/* Date Range */}
           <Text style={styles.sectionTitle}>Date Range</Text>
           <Input 
             label="Start Date" 
@@ -197,12 +183,9 @@ const Report = () => {
               onPress={handleRunReport} 
               loading={loading}
             />
-            <View style={styles.emailNote}>
-              <Ionicons name="mail-outline" size={14} color="#666" />
-              <Text style={styles.emailText}>The file will be sent to your email</Text>
-            </View>
+            <IconNote iconName="mail-outline" text="The file will be sent to your email" />
           </View>
-        </View>
+        </Card>
 
       </ScrollView>
 
@@ -215,17 +198,15 @@ const Report = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{modalTitle}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#000" />
-              </TouchableOpacity>
-            </View>
+            <ModalHeader title={modalTitle} onClose={() => setModalVisible(false)} />
             <FlatList
               data={modalData}
-              renderItem={renderSelectionItem}
+              renderItem={({ item }) => (
+                <SelectableListItem label={item.label} selected={isSelected(item)} onPress={() => handleSelect(item)} />
+              )}
               keyExtractor={(item) => item.value.toString()}
               contentContainerStyle={styles.modalList}
+              ItemSeparatorComponent={() => <View style={styles.modalSeparator} />}
             />
           </View>
         </View>
@@ -258,14 +239,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textLight,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     marginBottom: 20,
   },
   sectionTitle: {
@@ -275,24 +249,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 10,
   },
-  selectInput: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    padding: 12,
-    backgroundColor: '#fff',
-    marginBottom: 15,
-  },
-  selectText: {
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  placeholderText: {
-    color: '#999',
-  },
   divider: {
     height: 1,
     backgroundColor: '#eee',
@@ -300,17 +256,6 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 20,
-  },
-  emailNote: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  emailText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 5,
   },
   // Modal Styles
   modalOverlay: {
@@ -324,32 +269,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     maxHeight: '70%',
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   modalList: {
     padding: 20,
   },
-  modalItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  modalItemText: {
-    fontSize: 16,
-    color: theme.colors.text,
+  modalSeparator: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
   },
 });
 

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/SignUpPage.css';
-import '../styles/ErrorPopup.css';
 import logoWhite from '../assets/images/logo-white.png';
 import Input from '../components/Input';
 import Button from '../components/Button';
+import ErrorPopup from '../components/ErrorPopup';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { useForm } from '../hooks/useForm';
 import { authService } from '../services/api';
@@ -196,13 +196,7 @@ const SignUpPage: React.FC = () => {
         <div className={`signup-form-section ${isExiting ? 'slide-out-left' : 'slide-in-left'}`}>
           <h2 className="signup-title">{t("signup.title")}</h2>
           
-          {error && (
-            <div className="error-popup">
-              <div className="error-popup-content">
-                {error}
-              </div>
-            </div>
-          )}
+          {error ? <ErrorPopup message={error} /> : null}
 
           <form onSubmit={handleSignUp} className="signup-form">
             <Input
@@ -264,13 +258,17 @@ const SignUpPage: React.FC = () => {
               )}
 
               {!isCameraOpen && !faceImage && consentGiven && (
-                <button 
+                <Button
                   type="button" 
-                  onClick={(e) => { e.preventDefault(); startCamera(); }}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    startCamera()
+                  }}
+                  variant="none"
                   className="btn-enable-camera"
                 >
                   {t("signup.enableCamera")}
-                </button>
+                </Button>
               )}
 
               {isCameraOpen && (
@@ -280,12 +278,9 @@ const SignUpPage: React.FC = () => {
                     autoPlay
                     playsInline
                   />
-                  <button
-                    onClick={capturePhoto}
-                    className="btn-capture"
-                  >
+                  <Button onClick={capturePhoto} variant="none" className="btn-capture">
                     {t("signup.capturePhoto")}
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -294,12 +289,9 @@ const SignUpPage: React.FC = () => {
                   <div className="photo-success-message">
                     {t("signup.photoTaken")}
                   </div>
-                  <button
-                    onClick={retakePhoto}
-                    className="btn-retake"
-                  >
+                  <Button onClick={retakePhoto} variant="none" className="btn-retake">
                     {t("signup.retakePhoto")}
-                  </button>
+                  </Button>
                 </div>
               )}
               

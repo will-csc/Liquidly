@@ -19,10 +19,14 @@ import { invoiceService, poService, bomService, userService } from '../services/
 import { userStorage } from '../services/userStorage';
 import { Invoice, Po, Bom } from '../types';
 import { LineChart, PieChart } from 'react-native-chart-kit';
-import { Ionicons } from '@expo/vector-icons';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
 import { useI18n } from '../i18n/i18n';
 import type { Language } from '../i18n/translations';
+import ChartCard from '../components/ChartCard';
+import KpiCard from '../components/KpiCard';
+import ModalHeader from '../components/ModalHeader';
+import ScreenHeader from '../components/ScreenHeader';
+import SelectableListItem from '../components/SelectableListItem';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -174,18 +178,6 @@ const Dashboard = () => {
     fetchData();
   };
 
-  const KpiCard = ({ title, value, iconName }: { title: string; value: string; iconName: keyof typeof Ionicons.glyphMap }) => (
-    <View style={styles.kpiCard}>
-      <View style={styles.kpiHeader}>
-        <Text style={styles.kpiLabel}>{title}</Text>
-        <View style={styles.kpiIconWrap}>
-          <Ionicons name={iconName} size={16} color={theme.colors.primary} />
-        </View>
-      </View>
-      <Text style={styles.kpiValue}>{value}</Text>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
@@ -194,76 +186,75 @@ const Dashboard = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
         }
       >
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.headerTitle}>{t('dashboard.title')}</Text>
-            <Text style={styles.headerSubtitle}>{t('dashboard.subtitle')}</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => setLanguageModalVisible(true)}
-              style={[styles.actionButton, styles.languageButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
-              disabled={isDeletingAccount}
-            >
-              <Text style={styles.languageText}>
-                {t('language.title')}: {currentLanguageLabel}
-              </Text>
-            </TouchableOpacity>
+        <ScreenHeader
+          title={t('dashboard.title')}
+          subtitle={t('dashboard.subtitle')}
+          right={
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={() => setLanguageModalVisible(true)}
+                style={[styles.actionButton, styles.languageButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+                disabled={isDeletingAccount}
+              >
+                <Text style={styles.languageText}>
+                  {t('language.title')}: {currentLanguageLabel}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  if (isDeletingAccount) return;
+                  const user = userStorage.getUser();
+                  if (!user?.id) {
+                    Alert.alert(t('common.error'), t('dashboard.userNotFound'));
+                    return;
+                  }
 
-            <TouchableOpacity
-              onPress={() => {
-                if (isDeletingAccount) return;
-                const user = userStorage.getUser();
-                if (!user?.id) {
-                  Alert.alert(t('common.error'), t('dashboard.userNotFound'));
-                  return;
-                }
-
-                Alert.alert(
-                  t('dashboard.deleteConfirmTitle'),
-                  t('dashboard.deleteConfirmBody'),
-                  [
-                    { text: t('common.cancel'), style: 'cancel' },
-                    {
-                      text: t('dashboard.deleteAccount'),
-                      style: 'destructive',
-                      onPress: async () => {
-                        setIsDeletingAccount(true);
-                        try {
-                          await userService.delete(user.id);
-                          await userStorage.clearUser();
-                          navigation.replace('Entry');
-                        } catch (error) {
-                          setErrorMessage(getErrorMessage(error, 'Falha ao excluir a conta'));
-                        } finally {
-                          setIsDeletingAccount(false);
-                        }
+                  Alert.alert(
+                    t('dashboard.deleteConfirmTitle'),
+                    t('dashboard.deleteConfirmBody'),
+                    [
+                      { text: t('common.cancel'), style: 'cancel' },
+                      {
+                        text: t('dashboard.deleteAccount'),
+                        style: 'destructive',
+                        onPress: async () => {
+                          setIsDeletingAccount(true);
+                          try {
+                            await userService.delete(user.id);
+                            await userStorage.clearUser();
+                            navigation.replace('Entry');
+                          } catch (error) {
+                            setErrorMessage(getErrorMessage(error, 'Falha ao excluir a conta'));
+                          } finally {
+                            setIsDeletingAccount(false);
+                          }
+                        },
                       },
-                    },
-                  ]
-                );
-              }}
-              style={[styles.actionButton, styles.deleteButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
-              disabled={isDeletingAccount}
-            >
-              <Text style={styles.actionText}>
-                {isDeletingAccount ? t('dashboard.deleting') : t('dashboard.deleteAccount')}
-              </Text>
-            </TouchableOpacity>
+                    ]
+                  );
+                }}
+                style={[styles.actionButton, styles.deleteButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+                disabled={isDeletingAccount}
+              >
+                <Text style={styles.actionText}>
+                  {isDeletingAccount ? t('dashboard.deleting') : t('dashboard.deleteAccount')}
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={async () => {
-                if (isDeletingAccount) return;
-                await userStorage.clearUser();
-                navigation.replace('Entry');
-              }}
-              style={[styles.actionButton, styles.logoutButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
-              disabled={isDeletingAccount}
-            >
-              <Text style={styles.actionText}>{t('dashboard.logout')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (isDeletingAccount) return;
+                  await userStorage.clearUser();
+                  navigation.replace('Entry');
+                }}
+                style={[styles.actionButton, styles.logoutButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+                disabled={isDeletingAccount}
+              >
+                <Text style={styles.actionText}>{t('dashboard.logout')}</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
 
         {loading ? (
           <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 50 }} />
@@ -277,8 +268,7 @@ const Dashboard = () => {
             </View>
 
             {monthlyData && (
-              <View style={styles.chartCard}>
-                <Text style={styles.chartTitle}>{t('dashboard.chart.monthlyComparison')}</Text>
+              <ChartCard title={t('dashboard.chart.monthlyComparison')}>
                 <LineChart
                   data={monthlyData}
                   width={screenWidth - 40}
@@ -303,12 +293,11 @@ const Dashboard = () => {
                     borderRadius: 16
                   }}
                 />
-              </View>
+              </ChartCard>
             )}
 
             {statusData.length > 0 && (
-              <View style={styles.chartCard}>
-                <Text style={styles.chartTitle}>{t('dashboard.chart.invoiceStatus')}</Text>
+              <ChartCard title={t('dashboard.chart.invoiceStatus')}>
                 <PieChart
                   data={statusData}
                   width={screenWidth - 40}
@@ -322,7 +311,7 @@ const Dashboard = () => {
                   center={[10, 0]}
                   absolute
                 />
-              </View>
+              </ChartCard>
             )}
           </View>
         )}
@@ -332,31 +321,22 @@ const Dashboard = () => {
       <Modal visible={languageModalVisible} transparent animationType="fade" onRequestClose={() => setLanguageModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('language.title')}</Text>
-              <TouchableOpacity onPress={() => setLanguageModalVisible(false)} accessibilityRole="button">
-                <Ionicons name="close" size={22} color={theme.colors.text} />
-              </TouchableOpacity>
-            </View>
+            <ModalHeader title={t('language.title')} onClose={() => setLanguageModalVisible(false)} />
             <FlatList
               data={languageOptions}
               keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
-                <TouchableOpacity
+                <SelectableListItem
+                  label={item.label}
+                  selected={item.value === language}
                   onPress={() => {
                     setLanguage(item.value);
                     setLanguageModalVisible(false);
                   }}
-                  style={styles.modalItem}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.modalItemText}>{item.label}</Text>
-                  {item.value === language ? (
-                    <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
-                  ) : null}
-                </TouchableOpacity>
+                />
               )}
               ItemSeparatorComponent={() => <View style={styles.modalSeparator} />}
+              contentContainerStyle={styles.modalList}
             />
           </View>
         </View>
@@ -373,24 +353,8 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginBottom: 5,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
   headerActions: {
     alignItems: 'flex-end',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: theme.colors.textLight,
-    marginBottom: 20,
   },
   actionButton: {
     paddingHorizontal: 12,
@@ -433,66 +397,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 20,
   },
-  kpiCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  kpiHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  kpiIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0, 100, 0, 0.10)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  kpiLabel: {
-    flex: 1,
-    fontSize: 11,
-    color: theme.colors.textLight,
-    textTransform: 'uppercase',
-    marginRight: 8,
-    fontWeight: '700',
-  },
-  kpiValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  chartCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    alignItems: 'center',
-  },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 10,
-    alignSelf: 'flex-start',
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -505,29 +409,11 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     backgroundColor: '#fff',
     borderRadius: 14,
-    padding: 14,
+    padding: 0,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text,
-  },
-  modalItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  modalItemText: {
-    fontSize: 15,
-    color: theme.colors.text,
-    fontWeight: '600',
+  modalList: {
+    paddingHorizontal: 14,
+    paddingBottom: 12,
   },
   modalSeparator: {
     height: 1,

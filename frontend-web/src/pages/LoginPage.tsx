@@ -3,9 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
 import Input from '../components/Input';
 import Button from '../components/Button';
+import ErrorPopup from '../components/ErrorPopup';
 import { useForm } from '../hooks/useForm';
 import '../styles/LoginPage.css';
-import '../styles/ErrorPopup.css';
 import loginBackground from '../assets/images/login-image.png';
 import logoWhite from '../assets/images/logo-white.png';
 import cameraIcon from '../assets/images/camera-icon.png';
@@ -227,13 +227,7 @@ const LoginPage: React.FC = () => {
             ))}
           </h2>
           
-          {error && (
-            <div className={popupKind === "success" ? "success-popup" : "error-popup"}>
-              <div className={popupKind === "success" ? "success-popup-content" : "error-popup-content"}>
-                {error}
-              </div>
-            </div>
-          )}
+          {error ? <ErrorPopup message={error} kind={popupKind} /> : null}
 
           <form onSubmit={handleLogin} className="login-form">
             {!isCameraOpen ? (
@@ -268,15 +262,15 @@ const LoginPage: React.FC = () => {
                   <span>{t("common.or")}</span>
                 </div>
 
-                <button
+                <Button
                   type="button"
                   onClick={startCamera}
                   disabled={loading}
-                  className="btn-primary btn-face-login"
+                  className="btn-face-login"
                 >
                   <img src={cameraIcon} alt="Face Login" style={{ width: '24px', height: '24px' }} />
                   {t("login.loginWithFace")}
-                </button>
+                </Button>
                 
                 <a href="/forgot-password" onClick={handleForgotPassword} className="forgot-password-link">
                   {t("login.forgotPassword")} <span className="click-here">{t("login.clickHere")}</span>

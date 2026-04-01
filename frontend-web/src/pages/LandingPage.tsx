@@ -21,15 +21,16 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-5">
-          <button 
-            onClick={() => navigate('/login')} 
-            className="text-primary font-bold text-base md:text-lg hover:underline bg-transparent border-none cursor-pointer"
+          <Button
+            variant="link"
+            onClick={() => navigate('/login')}
+            className="text-primary font-bold text-base md:text-lg"
           >
             Sign In
-          </button>
+          </Button>
           <Button 
             onClick={() => navigate('/signup')} 
-            className="rounded-full px-8 py-6 text-lg"
+            className="rounded-full h-auto px-8 py-6 text-lg"
           >
             Sign Up
           </Button>
@@ -56,12 +57,13 @@ const LandingPage: React.FC = () => {
         </div>
 
         <div className="flex-shrink-0 pb-6 md:pb-10">
-          <button 
-            className="bg-[#d4edda] text-[#004d00] border border-[#c3e6cb] px-6 py-3 md:px-8 md:py-4 rounded-lg text-sm md:text-base font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+          <Button
+            variant="secondary"
+            className="h-auto bg-[#d4edda] text-[#004d00] border border-[#c3e6cb] px-6 py-3 md:px-8 md:py-4 rounded-lg text-sm md:text-base font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             onClick={() => navigate('/signup')}
           >
             Sign up now and manage your finance's balance better
-          </button>
+          </Button>
         </div>
       </main>
     </div>

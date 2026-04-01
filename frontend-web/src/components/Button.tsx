@@ -2,7 +2,7 @@ import React, { type ButtonHTMLAttributes } from 'react';
 import '../styles/GlobalComponents.css';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'none';
 }
 
 const Button: React.FC<ButtonProps> = ({ variant = 'primary', className = '', children, ...props }) => {
@@ -14,6 +14,8 @@ const Button: React.FC<ButtonProps> = ({ variant = 'primary', className = '', ch
         return 'btn-secondary';
       case 'outline':
         return 'btn-outline';
+      case 'none':
+        return '';
       default:
         return 'btn-primary';
     }

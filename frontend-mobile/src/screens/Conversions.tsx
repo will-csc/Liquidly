@@ -17,6 +17,10 @@ import { Conversion } from '../types';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
+import Card from '../components/Card';
+import ModalHeader from '../components/ModalHeader';
+import PillActionButton from '../components/PillActionButton';
+import ScreenHeader from '../components/ScreenHeader';
 
 const Conversions = () => {
   const [items, setItems] = useState<Conversion[]>([]);
@@ -131,7 +135,7 @@ const Conversions = () => {
   };
 
   const renderItem = ({ item }: { item: Conversion }) => (
-    <View style={styles.card}>
+    <Card style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.itemCode}>{item.itemCode}</Text>
         <Text style={styles.category}>{item.category}</Text>
@@ -150,17 +154,17 @@ const Conversions = () => {
           <Text style={styles.deleteText}>Delete</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </Card>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Conversions</Text>
-        <TouchableOpacity onPress={() => handleOpenModal()} style={styles.addButton}>
-          <Text style={styles.addButtonText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Conversions"
+        right={<PillActionButton label="+ Add" onPress={() => handleOpenModal()} />}
+        style={styles.header}
+        titleStyle={{ fontSize: 24, marginBottom: 0 }}
+      />
 
       {loading ? (
         <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 20 }} />
@@ -177,12 +181,7 @@ const Conversions = () => {
 
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{editingItem ? 'Edit Conversion' : 'New Conversion'}</Text>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Text style={styles.closeText}>Close</Text>
-            </TouchableOpacity>
-          </View>
+          <ModalHeader title={editingItem ? 'Edit Conversion' : 'New Conversion'} onClose={() => setModalVisible(false)} closeLabel="Close" />
           <View style={styles.form}>
             <Input label="Item Code" value={itemCode} onChangeText={setItemCode} />
             <Input label="From Unit (Invoice)" value={fromUnit} onChangeText={setFromUnit} />
@@ -205,40 +204,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: 20,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  addButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
   listContent: {
     padding: 15,
   },
   card: {
-    backgroundColor: '#fff',
+    marginBottom: 10,
     borderRadius: 10,
     padding: 15,
-    marginBottom: 10,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
@@ -297,22 +275,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  closeText: {
-    color: theme.colors.primary,
-    fontSize: 16,
   },
   form: {
     padding: 20,
