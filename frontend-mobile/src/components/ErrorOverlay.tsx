@@ -9,9 +9,24 @@ type ErrorOverlayProps = {
 };
 
 export const getErrorMessage = (error: any, fallbackMessage: string) => {
-  const message = error?.response?.data?.message ?? error?.message;
-  if (typeof message === 'string' && message.trim().length > 0) return message;
+  const raw = error?.response?.data?.message ?? error?.message;
+  const message = typeof raw === 'string' ? raw.split('\n')[0].trim() : '';
+  if (message.length > 0) return message;
   return fallbackMessage;
+};
+
+export const getErrorSummary = (error: any, fallbackMessage: string) => {
+  const message = getErrorMessage(error, fallbackMessage);
+  const stack = typeof error?.stack === 'string' ? error.stack : '';
+  if (!stack) return message;
+
+  const lines = stack.split('\n').map((l: string) => l.trim());
+  const location =
+    lines.find((l: string) => l.includes('\\src\\') || l.includes('/src/')) ||
+    lines.find((l: string) => l.includes('.tsx') || l.includes('.ts')) ||
+    '';
+
+  return location ? `${message}\n${location}` : message;
 };
 
 const ErrorOverlay: React.FC<ErrorOverlayProps> = ({ message, title = 'Erro', onClose }) => {

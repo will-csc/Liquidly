@@ -7,20 +7,21 @@ import { checkConnection, getCurrentBaseUrl, authService } from './src/services/
 
 export default function App() {
   useEffect(() => {
-    console.log(`[Mobile Startup] Base URL: ${getCurrentBaseUrl()}`);
+    const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+    if (!isTest) console.log(`[Mobile Startup] Base URL: ${getCurrentBaseUrl()}`);
     (async () => {
       try {
         const ok = await checkConnection();
-        console.log(`[Mobile Startup] Health check: ${ok ? 'OK' : 'FAILED'}`);
+        if (!isTest) console.log(`[Mobile Startup] Health check: ${ok ? 'OK' : 'FAILED'}`);
       } catch (e: any) {
-        console.warn('[Mobile Startup] Health check error', e?.message || e);
+        if (!isTest) console.warn('[Mobile Startup] Health check error', e?.message || e);
       }
       try {
         const route = '/api/users/exists';
         const result = await authService.emailExists('diagnostic@liquidly.invalid');
-        console.log('[Mobile Startup] Connectivity OK', { route, result });
+        if (!isTest) console.log('[Mobile Startup] Connectivity OK', { route, result });
       } catch (e: any) {
-        console.warn('[Mobile Startup] Connectivity FAILED', { route: '/api/users/exists', error: e?.message || e });
+        if (!isTest) console.warn('[Mobile Startup] Connectivity FAILED', { route: '/api/users/exists', error: e?.message || e });
       }
     })();
   }, []);

@@ -25,11 +25,13 @@ const LOCAL_URL = Platform.OS === 'android'
 let currentBaseUrl = PROD_URL;
 let isFallbackActive = false;
 
-console.log(`[Mobile API] Initializing with URL: ${currentBaseUrl}`);
-
 type RequestMeta = { start: number; id: string };
 
-const LOG_API = true;
+const IS_TEST = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+const LOG_API = IS_DEV && !IS_TEST;
+
+if (LOG_API) console.log(`[Mobile API] Initializing with URL: ${currentBaseUrl}`);
 
 const nowMs = () => Date.now();
 
