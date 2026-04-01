@@ -97,7 +97,7 @@ The frontend API base URL defaults to Render in production, but you should set i
 
 In Vercel, set:
 
-- `VITE_API_URL_PROD=https://YOUR-RENDER-APP.onrender.com`
+- `VITE_API_URL_PROD=https://YOUR-RENDER-APP.onrender.com` (example: `https://liquidly-backend.onrender.com`)
 
 Optional for local development:
 

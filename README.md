@@ -48,7 +48,7 @@ Key folders:
 - `frontend-web/src/services`: API client and service wrappers
 - `frontend-web/src/i18n`: translations and language provider
 
-See: `docs/frontend-web-structure.md` and `docs/how-to-run-frontend-web-locally.md`.
+See: `docs/structure.md` and `docs/running-locally.md`.
 
 ## Backend API (`backend-api/`)
 
@@ -58,7 +58,7 @@ Tech stack:
 - Spring Data JPA
 - PostgreSQL (recommended), with fallback to H2 (in-memory)
 
-See: `docs/how-to-run-backend-locally.md` and `docs/backend-api-structure.md`.
+See: `docs/structure.md` and `docs/running-locally.md`.
 
 ## Mobile App (`frontend-mobile/`)
 
@@ -68,7 +68,7 @@ Tech stack:
 - Axios
 - React Navigation
 
-See: `docs/frontend-mobile-structure.md` and `docs/how-to-run-frontend-mobile-locally.md`.
+See: `docs/structure.md` and `docs/running-locally.md`.
 
 ## Email/Report Service (`services/email-service/`)
 
@@ -78,7 +78,7 @@ Tech stack:
 - SMTP for sending emails
 - Generates Excel reports based on the database contents
 
-See: `docs/how-to-run-python-locally.md`.
+See: `docs/running-locally.md` and `docs/structure.md`.
 
 ## Running Locally (Quick Start)
 
@@ -163,13 +163,13 @@ You can configure it via:
   - `VITE_API_URL_PROD`
   - `VITE_API_URL_LOCAL`
 
-See: `docs/how-to-run-frontend-web-locally.md`.
+See: `docs/running-locally.md`.
 
 ### Email Service Environment Variables
 
 The email service requires SMTP credentials and (for report generation) database access. Do not commit secrets.
 
-See: `docs/how-to-run-python-locally.md`.
+See: `docs/running-locally.md`.
 
 ## Scripts
 
