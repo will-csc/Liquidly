@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  TouchableOpacity, 
-  Modal, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Modal,
   Alert,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
 } from 'react-native';
+import { useI18n } from '../i18n/i18n';
 import { theme } from '../styles/theme';
-import { conversionService } from '../services/api';
+import { bomService, conversionService } from '../services/api';
 import { userStorage } from '../services/userStorage';
-import { Conversion } from '../types';
+import { Bom, Conversion } from '../types';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
@@ -22,8 +23,12 @@ import ModalHeader from '../components/ModalHeader';
 import PillActionButton from '../components/PillActionButton';
 import ScreenHeader from '../components/ScreenHeader';
 
+const normalizeItemCode = (value: string) => value.trim().toLowerCase();
+
 const Conversions = () => {
+  const { t } = useI18n();
   const [items, setItems] = useState<Conversion[]>([]);
+  const [boms, setBoms] = useState<Bom[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<Conversion | null>(null);
@@ -31,56 +36,80 @@ const Conversions = () => {
 
   // Form State
   const [itemCode, setItemCode] = useState('');
+  const [invoiceQuantity, setInvoiceQuantity] = useState('');
   const [fromUnit, setFromUnit] = useState('');
+  const [bomQuantity, setBomQuantity] = useState('');
   const [toUnit, setToUnit] = useState('');
-  const [factor, setFactor] = useState('');
-  const [category, setCategory] = useState('');
 
-  const fetchItems = async () => {
+  const findBomUnit = (code: string) => {
+    const matchedBom = boms.find((bom) => normalizeItemCode(bom.itemCode) === normalizeItemCode(code));
+    return matchedBom?.umBom || '';
+  };
+
+  const fetchData = async () => {
     setLoading(true);
     try {
       const user = userStorage.getUser();
       let data: Conversion[] = [];
+      let bomData: Bom[] = [];
       if (user && user.companyId) {
-        data = await conversionService.getByCompany(user.companyId);
+        [data, bomData] = await Promise.all([
+          conversionService.getByCompany(user.companyId),
+          bomService.getByCompany(user.companyId),
+        ]);
       } else {
-        data = await conversionService.getAll();
+        [data, bomData] = await Promise.all([conversionService.getAll(), bomService.getAll()]);
       }
       setItems(data);
+      setBoms(bomData);
     } catch (error) {
       console.error('Failed to fetch conversions', error);
-      setErrorMessage(getErrorMessage(error, 'Failed to fetch conversions'));
+      setErrorMessage(getErrorMessage(error, t('conversions.fetchFailed')));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchItems();
+    fetchData();
   }, []);
 
   const handleOpenModal = (item?: Conversion) => {
     if (item) {
       setEditingItem(item);
       setItemCode(item.itemCode);
+      setInvoiceQuantity(item.qntdInvoice?.toString() || '');
       setFromUnit(item.umInvoice);
+      setBomQuantity(item.qntdBom?.toString() || '');
       setToUnit(item.umBom);
-      setFactor(item.conversionFactor.toString());
-      setCategory(item.category || '');
     } else {
       setEditingItem(null);
       setItemCode('');
+      setInvoiceQuantity('');
       setFromUnit('');
+      setBomQuantity('');
       setToUnit('');
-      setFactor('');
-      setCategory('');
     }
     setModalVisible(true);
   };
 
+  const handleChangeItemCode = (value: string) => {
+    setItemCode(value);
+    const matchedUnit = findBomUnit(value);
+    if (matchedUnit) {
+      setToUnit(matchedUnit);
+    }
+  };
+
   const handleSave = async () => {
-    if (!itemCode || !fromUnit || !toUnit || !factor) {
-      setErrorMessage('Please fill all required fields');
+    if (!itemCode || !invoiceQuantity || !fromUnit || !bomQuantity) {
+      setErrorMessage(t('conversions.required'));
+      return;
+    }
+
+    const bomUnit = findBomUnit(itemCode);
+    if (!bomUnit) {
+      setErrorMessage(t('conversions.itemNotInBom'));
       return;
     }
 
@@ -88,70 +117,74 @@ const Conversions = () => {
       const user = userStorage.getUser();
       const conversionData: Conversion = {
         itemCode,
+        qntdInvoice: parseFloat(invoiceQuantity),
         umInvoice: fromUnit,
-        umBom: toUnit,
-        conversionFactor: parseFloat(factor),
-        category: category || 'General',
-        company: user && user.companyId ? { id: user.companyId } : undefined
+        qntdBom: parseFloat(bomQuantity),
+        umBom: bomUnit,
+        company: user && user.companyId ? { id: user.companyId } : undefined,
       };
 
       if (editingItem && editingItem.id) {
-        // Edit logic (API doesn't have update yet based on service, but let's assume or just skip)
-        // For now, let's just alert
-        Alert.alert('Info', 'Update feature not implemented in mobile yet');
+        Alert.alert(t('common.ok'), t('conversions.updateNotImplemented'));
       } else {
-        // Create
         const created = await conversionService.create(conversionData);
-        setItems([...items, created]);
+        setItems((current) => [...current, created]);
       }
       setModalVisible(false);
     } catch (error) {
       console.error('Failed to save conversion', error);
-      setErrorMessage(getErrorMessage(error, 'Failed to save conversion'));
+      setErrorMessage(getErrorMessage(error, t('conversions.createFailed')));
     }
   };
 
   const handleDelete = async (id: number) => {
     Alert.alert(
-      'Delete',
-      'Are you sure you want to delete this item?',
+      t('conversions.deleteTitle'),
+      t('conversions.deleteConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await conversionService.delete(id);
-              setItems(items.filter(i => i.id !== id));
+              setItems((current) => current.filter((item) => item.id !== id));
             } catch (error) {
               console.error('Failed to delete', error);
-              setErrorMessage(getErrorMessage(error, 'Failed to delete item'));
+              setErrorMessage(getErrorMessage(error, t('conversions.deleteFailed')));
             }
-          }
-        }
+          },
+        },
       ]
     );
+  };
+
+  const getFactor = (item: Conversion) => {
+    const qntdInvoice = item.qntdInvoice ?? 0;
+    const qntdBom = item.qntdBom ?? 0;
+    if (qntdInvoice === 0) return '0';
+    const value = item.conversionFactor ?? qntdBom / qntdInvoice;
+    return Number.isFinite(value) ? value.toString() : '0';
   };
 
   const renderItem = ({ item }: { item: Conversion }) => (
     <Card style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.itemCode}>{item.itemCode}</Text>
-        <Text style={styles.category}>{item.category}</Text>
+        <Text style={styles.factor}>x{getFactor(item)}</Text>
       </View>
       <View style={styles.cardBody}>
         <Text style={styles.conversionText}>
-          {item.umInvoice} ➔ {item.umBom}
+          {(item.qntdInvoice ?? 0).toString()} {item.umInvoice} {'->'} {(item.qntdBom ?? 0).toString()} {item.umBom}
         </Text>
-        <Text style={styles.factor}>x{item.conversionFactor}</Text>
       </View>
       <View style={styles.cardActions}>
         <TouchableOpacity onPress={() => handleOpenModal(item)} style={styles.actionButton}>
-          <Text style={styles.editText}>Edit</Text>
+          <Text style={styles.editText}>{t('common.edit')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => item.id && handleDelete(item.id)} style={styles.actionButton}>
-          <Text style={styles.deleteText}>Delete</Text>
+          <Text style={styles.deleteText}>{t('common.delete')}</Text>
         </TouchableOpacity>
       </View>
     </Card>
@@ -160,8 +193,9 @@ const Conversions = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="Conversions"
-        right={<PillActionButton label="+ Add" onPress={() => handleOpenModal()} />}
+        title={t('conversions.title')}
+        subtitle={t('conversions.subtitle')}
+        right={<PillActionButton label={`+ ${t('conversions.addConversion')}`} onPress={() => handleOpenModal()} />}
         style={styles.header}
         titleStyle={{ fontSize: 24, marginBottom: 0 }}
       />
@@ -173,27 +207,42 @@ const Conversions = () => {
           data={items}
           renderItem={renderItem}
           keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, items.length === 0 ? styles.emptyList : null]}
           refreshing={loading}
-          onRefresh={fetchItems}
+          onRefresh={fetchData}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t('conversions.empty')}</Text>}
         />
       )}
 
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modalContainer}>
-          <ModalHeader title={editingItem ? 'Edit Conversion' : 'New Conversion'} onClose={() => setModalVisible(false)} closeLabel="Close" />
+          <ModalHeader
+            title={editingItem ? t('conversions.editConversion') : t('conversions.newConversion')}
+            onClose={() => setModalVisible(false)}
+            closeLabel={t('common.close')}
+          />
           <View style={styles.form}>
-            <Input label="Item Code" value={itemCode} onChangeText={setItemCode} />
-            <Input label="From Unit (Invoice)" value={fromUnit} onChangeText={setFromUnit} />
-            <Input label="To Unit (BOM)" value={toUnit} onChangeText={setToUnit} />
-            <Input label="Factor" value={factor} onChangeText={setFactor} keyboardType="numeric" />
-            <Input label="Category" value={category} onChangeText={setCategory} />
-            
-            <Button title="Save" onPress={handleSave} style={{ marginTop: 20 }} />
+            <Input label={t('conversions.itemCode')} value={itemCode} onChangeText={handleChangeItemCode} />
+            <Input
+              label={t('conversions.invoiceQuantity')}
+              value={invoiceQuantity}
+              onChangeText={setInvoiceQuantity}
+              keyboardType="numeric"
+            />
+            <Input label={t('conversions.fromUnit')} value={fromUnit} onChangeText={setFromUnit} />
+            <Input
+              label={t('conversions.bomQuantity')}
+              value={bomQuantity}
+              onChangeText={setBomQuantity}
+              keyboardType="numeric"
+            />
+            <Input label={t('conversions.toUnit')} value={toUnit} editable={false} />
+
+            <Button title={t('common.save')} onPress={handleSave} style={{ marginTop: 20 }} />
           </View>
         </SafeAreaView>
       </Modal>
-      <ErrorOverlay message={errorMessage} title="Error" onClose={() => setErrorMessage(null)} />
+      <ErrorOverlay message={errorMessage} title={t('common.error')} onClose={() => setErrorMessage(null)} />
     </SafeAreaView>
   );
 };
@@ -211,6 +260,15 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 15,
+  },
+  emptyList: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: theme.colors.textLight,
+    fontSize: 16,
   },
   card: {
     marginBottom: 10,
@@ -230,19 +288,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.text,
   },
-  category: {
-    fontSize: 12,
-    color: theme.colors.textLight,
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
   cardBody: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 15,
   },
   conversionText: {

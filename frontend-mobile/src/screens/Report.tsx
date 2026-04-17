@@ -11,6 +11,7 @@ import {
   Alert
 } from 'react-native';
 import { theme } from '../styles/theme';
+import { useI18n } from '../i18n/i18n';
 import { projectService, bomService, liquidationResultService } from '../services/api';
 import { userStorage } from '../services/userStorage';
 import { Project, Bom } from '../types';
@@ -30,6 +31,7 @@ interface SelectionItem {
 }
 
 const Report = () => {
+  const { t } = useI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [boms, setBoms] = useState<Bom[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,7 +75,7 @@ const Report = () => {
       setBoms(bomsData);
     } catch (error) {
       console.error('Failed to fetch report data', error);
-      setErrorMessage(getErrorMessage(error, 'Failed to load data for report'));
+      setErrorMessage(getErrorMessage(error, t('report.loadFailed')));
     } finally {
       setLoading(false);
     }
@@ -82,11 +84,14 @@ const Report = () => {
   const openSelectionModal = (type: 'project' | 'bom') => {
     setCurrentSelectionType(type);
     if (type === 'project') {
-      setModalTitle('Select Project');
+      setModalTitle(t('report.modal.selectProject'));
       setModalData(projects.map(p => ({ label: p.name, value: p.id || '' })));
     } else {
-      setModalTitle('Select BOM Item');
-      setModalData(boms.map(b => ({ label: `${b.itemCode} - ${b.itemName}`, value: b.id || '' })));
+      setModalTitle(t('report.modal.selectBom'));
+      const filteredBoms = selectedProject?.value
+        ? boms.filter((bom) => bom.project?.id === selectedProject.value)
+        : boms;
+      setModalData(filteredBoms.map(b => ({ label: `${b.itemCode} - ${b.itemName}`, value: b.id || '' })));
     }
     setModalVisible(true);
   };
@@ -94,6 +99,7 @@ const Report = () => {
   const handleSelect = (item: SelectionItem) => {
     if (currentSelectionType === 'project') {
       setSelectedProject(item);
+      setSelectedBom(null);
     } else {
       setSelectedBom(item);
     }
@@ -103,11 +109,11 @@ const Report = () => {
   const handleRunReport = async () => {
     const user = userStorage.getUser();
     if (!user || !user.companyId || !user.email) {
-      setErrorMessage('Please log in again to run reports');
+      setErrorMessage(t('report.loginRequired'));
       return;
     }
     if (!selectedProject?.value) {
-      setErrorMessage('Please select a project');
+      setErrorMessage(t('report.projectRequired'));
       return;
     }
 
@@ -122,10 +128,10 @@ const Report = () => {
         endDate: endDate || undefined
       });
 
-      Alert.alert('Success', 'Report sent to your email');
+      Alert.alert(t('common.success'), t('report.runSuccess'));
     } catch (error: any) {
       console.error('Failed to run report:', error);
-      setErrorMessage(getErrorMessage(error, 'Failed to run report'));
+      setErrorMessage(getErrorMessage(error, t('report.runFailed')));
     } finally {
       setLoading(false);
     }
@@ -139,51 +145,51 @@ const Report = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <ScreenHeader
-          title="Reports"
-          subtitle="Generate detailed project reports"
+          title={t('report.title')}
+          subtitle={t('report.subtitle')}
           style={{ marginBottom: 20 }}
         />
 
         <Card style={styles.card}>
           <SelectField
-            label="Project Details"
+            label={t('report.section.projectDetails')}
             valueText={selectedProject ? selectedProject.label : undefined}
-            placeholder="Select a project..."
+            placeholder={t('report.placeholder.selectProject')}
             onPress={() => openSelectionModal('project')}
           />
 
           <View style={styles.divider} />
 
           <SelectField
-            label="BOM Details"
+            label={t('report.section.bomDetails')}
             valueText={selectedBom ? selectedBom.label : undefined}
-            placeholder="Choose items..."
+            placeholder={t('report.placeholder.chooseItems')}
             onPress={() => openSelectionModal('bom')}
           />
 
           <View style={styles.divider} />
 
-          <Text style={styles.sectionTitle}>Date Range</Text>
-          <Input 
-            label="Start Date" 
-            placeholder="DD/MM/YYYY" 
+          <Text style={styles.sectionTitle}>{t('report.section.dateRange')}</Text>
+          <Input
+            label={t('report.label.startDate')}
+            placeholder="DD/MM/YYYY"
             value={startDate}
             onChangeText={setStartDate}
           />
-          <Input 
-            label="End Date" 
-            placeholder="DD/MM/YYYY" 
+          <Input
+            label={t('report.label.endDate')}
+            placeholder="DD/MM/YYYY"
             value={endDate}
             onChangeText={setEndDate}
           />
 
           <View style={styles.buttonContainer}>
-            <Button 
-              title="Run Report" 
-              onPress={handleRunReport} 
+            <Button
+              title={t('report.button.run')}
+              onPress={handleRunReport}
               loading={loading}
             />
-            <IconNote iconName="mail-outline" text="The file will be sent to your email" />
+            <IconNote iconName="mail-outline" text={t('report.helper.emailSent')} />
           </View>
         </Card>
 
@@ -211,7 +217,7 @@ const Report = () => {
           </View>
         </View>
       </Modal>
-      <ErrorOverlay message={errorMessage} title="Error" onClose={() => setErrorMessage(null)} />
+      <ErrorOverlay message={errorMessage} title={t('common.error')} onClose={() => setErrorMessage(null)} />
     </SafeAreaView>
   );
 };

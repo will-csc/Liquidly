@@ -35,6 +35,13 @@ export interface SignupRequest {
 
 export interface Bom {
   id?: number;
+  projectName?: string;
+  remainingQntd?: number;
+  createdAt?: string;
+  project?: {
+    id: number;
+    name?: string;
+  };
   itemCode: string;
   itemName: string;
   umBom: string;
@@ -47,12 +54,12 @@ export interface Bom {
 export interface Conversion {
   id?: number;
   itemCode: string;
-  umInvoice: string;
-  umBom: string;
-  conversionFactor: number;
-  category?: string;
   qntdInvoice?: number;
+  umInvoice: string;
   qntdBom?: number;
+  umBom: string;
+  conversionFactor?: number;
+  createdAt?: string;
   company?: {
     id: number;
   };
@@ -91,10 +98,7 @@ export interface Po {
 export interface Project {
   id?: number;
   name: string;
-  description?: string;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
+  createdAt?: string;
   company?: {
     id: number;
   };

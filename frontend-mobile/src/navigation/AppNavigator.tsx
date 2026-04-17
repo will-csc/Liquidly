@@ -12,6 +12,7 @@ import ForgotPassword from '../screens/ForgotPassword';
 
 // New Screens
 import Dashboard from '../screens/Dashboard';
+import Projects from '../screens/Projects';
 import BOM from '../screens/BOM';
 import Conversions from '../screens/Conversions';
 import Report from '../screens/Report';
@@ -34,6 +35,8 @@ const MainTabs = () => {
 
           if (route.name === 'Dashboard') {
             iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Projects') {
+            iconName = focused ? 'folder' : 'folder-outline';
           } else if (route.name === 'BOM') {
             iconName = focused ? 'list' : 'list-outline';
           } else if (route.name === 'Conversions') {
@@ -53,6 +56,11 @@ const MainTabs = () => {
         name="Dashboard"
         component={Dashboard}
         options={{ title: t('nav.home'), tabBarLabel: t('nav.home') }}
+      />
+      <Tab.Screen
+        name="Projects"
+        component={Projects}
+        options={{ title: t('nav.projects'), tabBarLabel: t('nav.projects') }}
       />
       <Tab.Screen
         name="Conversions"
