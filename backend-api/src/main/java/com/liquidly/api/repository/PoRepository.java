@@ -13,7 +13,6 @@ import java.util.Set;
 public interface PoRepository extends JpaRepository<Po, Long> {
     List<Po> findByCompany(Company company);
     List<Po> findByCompanyId(Long companyId);
-    List<Po> findByInvoiceNumber(String invoiceNumber);
-    List<Po> findByCompanyIdAndInvoiceNumberIn(Long companyId, Set<String> invoiceNumbers);
+    List<Po> findByPoNumber(String poNumber);
     void deleteByCompanyId(Long companyId);
 }

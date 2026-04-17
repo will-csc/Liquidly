@@ -92,7 +92,9 @@ CREATE TABLE invoices (
    ========================================================================== */
 CREATE TABLE pos (
     id SERIAL PRIMARY KEY,
-    invoice_number VARCHAR(100), -- Textual reference or FK to invoices
+    po_number VARCHAR(100), -- Numero da PO, sem FK
+    item_code VARCHAR(100) NOT NULL,
+    po_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
     qntd_invoice NUMERIC(15, 4) NOT NULL,
     um_po VARCHAR(20) NOT NULL,
     remaining_qntd NUMERIC(15, 4) NOT NULL DEFAULT 0,
@@ -131,9 +133,12 @@ CREATE TABLE liquidation_results (
     
     -- PO Details
     po_number VARCHAR(100),
+    po_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
     qntd_po NUMERIC(15, 4) NOT NULL DEFAULT 0,
     um_po VARCHAR(20),
+    consumed_po_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
     qntd_consumed_po NUMERIC(15, 4) NOT NULL DEFAULT 0,
+    remaining_po_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
     remaining_qntd_po NUMERIC(15, 4) NOT NULL DEFAULT 0,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

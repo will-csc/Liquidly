@@ -76,7 +76,9 @@ export interface Invoice {
 
 export interface Po {
   id?: number;
-  invoiceNumber: string; // references invoice
+  poNumber: string;
+  itemCode?: string;
+  poValue?: number;
   qntdInvoice: number;
   umPo: string;
   remainingQntd: number;

@@ -84,14 +84,23 @@ public class LiquidationResult {
     @Column(name = "po_number")
     private String poNumber;
 
+    @Column(name = "po_value", nullable = false, precision = 15, scale = 2)
+    private BigDecimal poValue;
+
     @Column(name = "qntd_po", nullable = false, precision = 15, scale = 4)
     private BigDecimal qntdPo;
 
     @Column(name = "um_po")
     private String umPo;
 
+    @Column(name = "consumed_po_value", nullable = false, precision = 15, scale = 2)
+    private BigDecimal consumedPoValue;
+
     @Column(name = "qntd_consumed_po", nullable = false, precision = 15, scale = 4)
     private BigDecimal qntdConsumedPo;
+
+    @Column(name = "remaining_po_value", nullable = false, precision = 15, scale = 2)
+    private BigDecimal remainingPoValue;
 
     @Column(name = "remaining_qntd_po", nullable = false, precision = 15, scale = 4)
     private BigDecimal remainingQntdPo;
@@ -107,6 +116,9 @@ public class LiquidationResult {
         if (invoiceValue == null) invoiceValue = BigDecimal.ZERO;
         if (consumedInvoiceValue == null) consumedInvoiceValue = BigDecimal.ZERO;
         if (remainingInvoiceValue == null) remainingInvoiceValue = BigDecimal.ZERO;
+        if (poValue == null) poValue = BigDecimal.ZERO;
+        if (consumedPoValue == null) consumedPoValue = BigDecimal.ZERO;
+        if (remainingPoValue == null) remainingPoValue = BigDecimal.ZERO;
         createdAt = LocalDateTime.now();
     }
 }

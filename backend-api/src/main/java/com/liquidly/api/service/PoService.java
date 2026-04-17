@@ -28,9 +28,9 @@ public class PoService {
         return poRepository.findByCompanyId(companyId);
     }
 
-    // Return PO records filtered by invoice number.
-    public List<Po> getPosByInvoiceNumber(String invoiceNumber) {
-        return poRepository.findByInvoiceNumber(invoiceNumber);
+    // Return PO records filtered by PO number.
+    public List<Po> getPosByPoNumber(String poNumber) {
+        return poRepository.findByPoNumber(poNumber);
     }
 
     // Return a PO record by id.

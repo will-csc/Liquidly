@@ -34,10 +34,10 @@ public class PoController {
         return ResponseEntity.ok(poService.getPosByCompanyId(companyId));
     }
 
-    // Return PO records filtered by invoice number.
-    @GetMapping("/invoice/{invoiceNumber}")
-    public ResponseEntity<List<Po>> getPosByInvoiceNumber(@PathVariable String invoiceNumber) {
-        return ResponseEntity.ok(poService.getPosByInvoiceNumber(invoiceNumber));
+    // Return PO records filtered by PO number.
+    @GetMapping("/number/{poNumber}")
+    public ResponseEntity<List<Po>> getPosByPoNumber(@PathVariable String poNumber) {
+        return ResponseEntity.ok(poService.getPosByPoNumber(poNumber));
     }
 
     // Return a PO record by id.

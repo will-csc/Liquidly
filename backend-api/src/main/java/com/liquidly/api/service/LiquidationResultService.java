@@ -26,11 +26,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class LiquidationResultService {
@@ -201,15 +197,7 @@ public class LiquidationResultService {
         // Load input data for the liquidation run.
         List<Bom> boms = bomRepository.findByCompanyIdAndProjectId(companyId, projectId);
         List<Invoice> invoices = invoiceRepository.findByCompanyIdAndProjectId(companyId, projectId);
-
-        Set<String> invoiceNumbers = invoices.stream()
-                .map(Invoice::getInvoiceNumber)
-                .filter((n) -> n != null && !n.trim().isEmpty())
-                .collect(Collectors.toSet());
-
-        List<Po> pos = invoiceNumbers.isEmpty()
-                ? List.of()
-                : poRepository.findByCompanyIdAndInvoiceNumberIn(companyId, invoiceNumbers);
+        List<Po> pos = poRepository.findByCompanyId(companyId);
 
         // Initialize remaining quantities if missing.
         for (Bom b : boms) {
@@ -242,13 +230,6 @@ public class LiquidationResultService {
             }
             return Long.compare(nzId(b.getId()), nzId(a.getId()));
         });
-
-        Map<String, String> invoiceItemCodeByNumber = new HashMap<>();
-        for (Invoice invoice : invoices) {
-            String invoiceNumber = invoice.getInvoiceNumber();
-            if (invoiceNumber == null || invoiceNumber.trim().isEmpty()) continue;
-            invoiceItemCodeByNumber.putIfAbsent(invoiceNumber.trim(), normalize(invoice.getItemCode()));
-        }
 
         List<LiquidationResult> results = new ArrayList<>();
         String fallbackProjectName = project.getName() == null ? "" : project.getName();
@@ -294,11 +275,7 @@ public class LiquidationResultService {
             for (Po po : pos) {
                 BigDecimal poRemaining = nz(po.getRemainingQntd());
                 if (poRemaining.signum() <= 0) continue;
-                String poItemCode = invoiceItemCodeByNumber.getOrDefault(
-                        po.getInvoiceNumber() == null ? "" : po.getInvoiceNumber().trim(),
-                        ""
-                );
-                if (!bomItemCode.equals(poItemCode)) continue;
+                if (!bomItemCode.equals(normalize(po.getItemCode()))) continue;
 
                 // Convert PO UM -> BOM UM using the latest conversion factor for the item.
                 BigDecimal factor = getFactor(companyId, bom.getItemCode(), po.getUmPo(), bom.getUmBom());
@@ -422,16 +399,24 @@ public class LiquidationResultService {
         }
 
         if (po != null) {
-            r.setPoNumber(po.getInvoiceNumber());
-            r.setQntdPo(nz(po.getQntdInvoice()));
+            BigDecimal poValue = nz(po.getPoValue());
+            BigDecimal poQty = nz(po.getQntdInvoice());
+            r.setPoNumber(po.getPoNumber());
+            r.setPoValue(moneyRound(poValue));
+            r.setQntdPo(poQty);
             r.setUmPo(po.getUmPo());
+            r.setConsumedPoValue(proportionalValue(poValue, poQty, consumedPo));
             r.setQntdConsumedPo(nz(consumedPo));
+            r.setRemainingPoValue(proportionalValue(poValue, poQty, poRemaining));
             r.setRemainingQntdPo(nz(poRemaining));
         } else {
             r.setPoNumber(null);
+            r.setPoValue(BigDecimal.ZERO);
             r.setQntdPo(BigDecimal.ZERO);
             r.setUmPo(null);
+            r.setConsumedPoValue(BigDecimal.ZERO);
             r.setQntdConsumedPo(BigDecimal.ZERO);
+            r.setRemainingPoValue(BigDecimal.ZERO);
             r.setRemainingQntdPo(BigDecimal.ZERO);
         }
 

@@ -190,10 +190,13 @@ def _insert_invoice_and_po(cur, company_id: int, project_id: int):
     qty = _random_qty(max_qty=max(base_qty, Decimal("0.01")))
     unit_price = Decimal(str(random.uniform(10, 200))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     invoice_value = (qty * unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    po_unit_price = Decimal(str(random.uniform(10, 200))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    po_value = (qty * po_unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     country = "BR"
     invoice_date_string = datetime.now().strftime("%Y-%m-%d")
 
     invoice_number = f"INV-{int(time.time())}-{random.randint(1000, 9999)}"
+    po_number = f"PO-{int(time.time())}-{random.randint(1000, 9999)}"
 
     cur.execute(
         """
@@ -207,15 +210,15 @@ def _insert_invoice_and_po(cur, company_id: int, project_id: int):
 
     cur.execute(
         """
-        INSERT INTO pos (invoice_number, qntd_invoice, um_po, remaining_qntd, company_id, created_at)
-        VALUES (%s, %s, %s, %s, %s, NOW())
+        INSERT INTO pos (po_number, item_code, po_value, qntd_invoice, um_po, remaining_qntd, company_id, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
         RETURNING id
         """,
-        (invoice_number, qty, um, qty, company_id),
+        (po_number, item_code, po_value, qty, um, qty, company_id),
     )
     po_id = cur.fetchone()["id"]
 
-    return {"invoiceId": invoice_id, "poId": po_id, "invoiceNumber": invoice_number}
+    return {"invoiceId": invoice_id, "poId": po_id, "invoiceNumber": invoice_number, "poNumber": po_number}
 
 def _parse_iso_date(value):
     if value is None:
@@ -251,9 +254,12 @@ def _build_liquidation_report_excel(rows, filters):
         "remaining_invoice_value",
         "remaining_qntd_invoice",
         "po_number",
+        "po_value",
         "um_po",
         "qntd_po",
+        "consumed_po_value",
         "qntd_consumed_po",
+        "remaining_po_value",
         "remaining_qntd_po",
         "created_at",
     ]
@@ -270,14 +276,20 @@ def _build_liquidation_report_excel(rows, filters):
         "qntd_invoice",
         "qntd_consumed_invoice",
         "remaining_qntd_invoice",
+        "po_value",
         "qntd_po",
+        "consumed_po_value",
         "qntd_consumed_po",
+        "remaining_po_value",
         "remaining_qntd_po",
     }
     money_cols = {
         "invoice_value",
         "consumed_invoice_value",
         "remaining_invoice_value",
+        "po_value",
+        "consumed_po_value",
+        "remaining_po_value",
     }
     for idx, h in enumerate(headers, start=1):
         if h in numeric_cols or h in money_cols:
@@ -340,9 +352,12 @@ def _fetch_liquidation_rows(company_id: int, project_id: int, item_code: str = N
                         lr.remaining_invoice_value,
                         lr.remaining_qntd_invoice,
                         lr.po_number,
+                        lr.po_value,
                         lr.um_po,
                         lr.qntd_po,
+                        lr.consumed_po_value,
                         lr.qntd_consumed_po,
+                        lr.remaining_po_value,
                         lr.remaining_qntd_po,
                         lr.created_at
                     FROM liquidation_results lr
@@ -352,7 +367,7 @@ def _fetch_liquidation_rows(company_id: int, project_id: int, item_code: str = N
                        AND i.invoice_number = lr.invoice_number
                     LEFT JOIN pos p
                         ON p.company_id = lr.company_id
-                       AND p.invoice_number = lr.po_number
+                       AND p.po_number = lr.po_number
                     WHERE {" AND ".join(where)}
                     ORDER BY lr.created_at NULLS LAST, lr.id
                 """
