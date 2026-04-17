@@ -26,7 +26,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -220,26 +222,33 @@ public class LiquidationResultService {
             if (isNullOrZero(p.getRemainingQntd())) p.setRemainingQntd(nz(p.getQntdInvoice()));
         }
 
-        // Sort invoices and POs for deterministic consumption order (by createdAt then id).
+        // Sort invoices and POs to prioritize the newest records first.
         invoices.sort((a, b) -> {
             if (a.getCreatedAt() == null && b.getCreatedAt() != null) return 1;
             if (a.getCreatedAt() != null && b.getCreatedAt() == null) return -1;
             if (a.getCreatedAt() != null) {
-                int cmp = a.getCreatedAt().compareTo(b.getCreatedAt());
+                int cmp = b.getCreatedAt().compareTo(a.getCreatedAt());
                 if (cmp != 0) return cmp;
             }
-            return Long.compare(nzId(a.getId()), nzId(b.getId()));
+            return Long.compare(nzId(b.getId()), nzId(a.getId()));
         });
 
         pos.sort((a, b) -> {
             if (a.getCreatedAt() == null && b.getCreatedAt() != null) return 1;
             if (a.getCreatedAt() != null && b.getCreatedAt() == null) return -1;
             if (a.getCreatedAt() != null) {
-                int cmp = a.getCreatedAt().compareTo(b.getCreatedAt());
+                int cmp = b.getCreatedAt().compareTo(a.getCreatedAt());
                 if (cmp != 0) return cmp;
             }
-            return Long.compare(nzId(a.getId()), nzId(b.getId()));
+            return Long.compare(nzId(b.getId()), nzId(a.getId()));
         });
+
+        Map<String, String> invoiceItemCodeByNumber = new HashMap<>();
+        for (Invoice invoice : invoices) {
+            String invoiceNumber = invoice.getInvoiceNumber();
+            if (invoiceNumber == null || invoiceNumber.trim().isEmpty()) continue;
+            invoiceItemCodeByNumber.putIfAbsent(invoiceNumber.trim(), normalize(invoice.getItemCode()));
+        }
 
         List<LiquidationResult> results = new ArrayList<>();
         String fallbackProjectName = project.getName() == null ? "" : project.getName();
@@ -248,10 +257,12 @@ public class LiquidationResultService {
         for (Bom bom : boms) {
             BigDecimal bomRemaining = nz(bom.getRemainingQntd());
             if (bomRemaining.signum() <= 0) continue;
+            String bomItemCode = normalize(bom.getItemCode());
 
             for (Invoice inv : invoices) {
                 BigDecimal invRemaining = nz(inv.getRemainingQntd());
                 if (invRemaining.signum() <= 0) continue;
+                if (!bomItemCode.equals(normalize(inv.getItemCode()))) continue;
 
                 // Convert invoice UM -> BOM UM using the latest conversion factor for the item.
                 BigDecimal factor = getFactor(companyId, bom.getItemCode(), inv.getUmInvoice(), bom.getUmBom());
@@ -283,6 +294,11 @@ public class LiquidationResultService {
             for (Po po : pos) {
                 BigDecimal poRemaining = nz(po.getRemainingQntd());
                 if (poRemaining.signum() <= 0) continue;
+                String poItemCode = invoiceItemCodeByNumber.getOrDefault(
+                        po.getInvoiceNumber() == null ? "" : po.getInvoiceNumber().trim(),
+                        ""
+                );
+                if (!bomItemCode.equals(poItemCode)) continue;
 
                 // Convert PO UM -> BOM UM using the latest conversion factor for the item.
                 BigDecimal factor = getFactor(companyId, bom.getItemCode(), po.getUmPo(), bom.getUmBom());
@@ -380,16 +396,28 @@ public class LiquidationResultService {
         r.setRemainingQntd(nz(bomRemaining));
 
         if (invoice != null) {
+            BigDecimal invoiceValue = nz(invoice.getInvoiceValue());
+            BigDecimal invoiceQty = nz(invoice.getQntdInvoice());
             r.setInvoiceNumber(invoice.getInvoiceNumber());
-            r.setQntdInvoice(nz(invoice.getQntdInvoice()));
+            r.setInvoiceCountry(safeString(invoice.getCountry()));
+            r.setInvoiceDateString(safeString(invoice.getInvoiceDateString()));
+            r.setInvoiceValue(moneyRound(invoiceValue));
+            r.setQntdInvoice(invoiceQty);
             r.setUmInvoice(invoice.getUmInvoice());
+            r.setConsumedInvoiceValue(proportionalValue(invoiceValue, invoiceQty, consumedInvoice));
             r.setQntdConsumedInvoice(nz(consumedInvoice));
+            r.setRemainingInvoiceValue(proportionalValue(invoiceValue, invoiceQty, invoiceRemaining));
             r.setRemainingQntdInvoice(nz(invoiceRemaining));
         } else {
             r.setInvoiceNumber(null);
+            r.setInvoiceCountry("");
+            r.setInvoiceDateString("");
+            r.setInvoiceValue(BigDecimal.ZERO);
             r.setQntdInvoice(BigDecimal.ZERO);
             r.setUmInvoice(null);
+            r.setConsumedInvoiceValue(BigDecimal.ZERO);
             r.setQntdConsumedInvoice(BigDecimal.ZERO);
+            r.setRemainingInvoiceValue(BigDecimal.ZERO);
             r.setRemainingQntdInvoice(BigDecimal.ZERO);
         }
 
@@ -419,6 +447,23 @@ public class LiquidationResultService {
         return a.divide(b, 12, RoundingMode.HALF_UP);
     }
 
+    private BigDecimal proportionalValue(BigDecimal totalValue, BigDecimal totalQty, BigDecimal partialQty) {
+        BigDecimal safeTotalValue = nz(totalValue);
+        BigDecimal safeTotalQty = nz(totalQty);
+        BigDecimal safePartialQty = nz(partialQty);
+        if (safeTotalValue.signum() == 0 || safeTotalQty.signum() == 0 || safePartialQty.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal unitValue = safeTotalValue.divide(safeTotalQty, 12, RoundingMode.HALF_UP);
+        return moneyRound(unitValue.multiply(safePartialQty));
+    }
+
+    private BigDecimal moneyRound(BigDecimal v) {
+        if (v == null) return BigDecimal.ZERO;
+        return v.setScale(2, RoundingMode.HALF_UP);
+    }
+
     private BigDecimal nz(BigDecimal v) {
         return v == null ? BigDecimal.ZERO : v;
     }
@@ -429,6 +474,10 @@ public class LiquidationResultService {
 
     private String normalize(String s) {
         return s == null ? "" : s.trim().toLowerCase();
+    }
+
+    private String safeString(String s) {
+        return s == null ? "" : s;
     }
 
     private long nzId(Long id) {

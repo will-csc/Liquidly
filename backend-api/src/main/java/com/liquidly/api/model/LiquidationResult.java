@@ -53,14 +53,29 @@ public class LiquidationResult {
     @Column(name = "invoice_number")
     private String invoiceNumber;
 
+    @Column(name = "invoice_country", nullable = false, length = 2)
+    private String invoiceCountry;
+
+    @Column(name = "invoice_date_string", nullable = false, length = 40)
+    private String invoiceDateString;
+
+    @Column(name = "invoice_value", nullable = false, precision = 15, scale = 2)
+    private BigDecimal invoiceValue;
+
     @Column(name = "qntd_invoice", nullable = false, precision = 15, scale = 4)
     private BigDecimal qntdInvoice;
 
     @Column(name = "um_invoice")
     private String umInvoice;
 
+    @Column(name = "consumed_invoice_value", nullable = false, precision = 15, scale = 2)
+    private BigDecimal consumedInvoiceValue;
+
     @Column(name = "qntd_consumed_invoice", nullable = false, precision = 15, scale = 4)
     private BigDecimal qntdConsumedInvoice;
+
+    @Column(name = "remaining_invoice_value", nullable = false, precision = 15, scale = 2)
+    private BigDecimal remainingInvoiceValue;
 
     @Column(name = "remaining_qntd_invoice", nullable = false, precision = 15, scale = 4)
     private BigDecimal remainingQntdInvoice;
@@ -87,6 +102,11 @@ public class LiquidationResult {
     @PrePersist
     // Set the creation timestamp automatically when the record is first persisted.
     protected void onCreate() {
+        if (invoiceCountry == null) invoiceCountry = "";
+        if (invoiceDateString == null) invoiceDateString = "";
+        if (invoiceValue == null) invoiceValue = BigDecimal.ZERO;
+        if (consumedInvoiceValue == null) consumedInvoiceValue = BigDecimal.ZERO;
+        if (remainingInvoiceValue == null) remainingInvoiceValue = BigDecimal.ZERO;
         createdAt = LocalDateTime.now();
     }
 }

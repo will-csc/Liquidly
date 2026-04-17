@@ -74,7 +74,11 @@ CREATE TABLE conversions (
 CREATE TABLE invoices (
     id SERIAL PRIMARY KEY,
     project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    item_code VARCHAR(100) NOT NULL,
     invoice_number VARCHAR(100) NOT NULL,
+    country VARCHAR(2) NOT NULL DEFAULT '',
+    invoice_date_string VARCHAR(40) NOT NULL DEFAULT '',
+    invoice_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
     qntd_invoice NUMERIC(15, 4) NOT NULL,
     um_invoice VARCHAR(20) NOT NULL,
     remaining_qntd NUMERIC(15, 4) NOT NULL DEFAULT 0,
@@ -115,9 +119,14 @@ CREATE TABLE liquidation_results (
     
     -- Invoice Details
     invoice_number VARCHAR(100),
+    invoice_country VARCHAR(2) NOT NULL DEFAULT '',
+    invoice_date_string VARCHAR(40) NOT NULL DEFAULT '',
+    invoice_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
     qntd_invoice NUMERIC(15, 4) NOT NULL DEFAULT 0,
     um_invoice VARCHAR(20),
+    consumed_invoice_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
     qntd_consumed_invoice NUMERIC(15, 4) NOT NULL DEFAULT 0,
+    remaining_invoice_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
     remaining_qntd_invoice NUMERIC(15, 4) NOT NULL DEFAULT 0,
     
     -- PO Details
@@ -136,4 +145,5 @@ CREATE TABLE liquidation_results (
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_boms_item_code ON boms(item_code);
 CREATE INDEX idx_conversions_item_code ON conversions(item_code);
+CREATE INDEX idx_invoices_item_code ON invoices(item_code);
 CREATE INDEX idx_invoices_number ON invoices(invoice_number);

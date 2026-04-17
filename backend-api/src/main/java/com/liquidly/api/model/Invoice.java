@@ -26,8 +26,20 @@ public class Invoice {
     @JoinColumn(name = "project_id")
     private Project project;
 
+    @Column(name = "item_code", nullable = false)
+    private String itemCode;
+
     @Column(name = "invoice_number", nullable = false)
     private String invoiceNumber;
+
+    @Column(name = "country", nullable = false, length = 2)
+    private String country;
+
+    @Column(name = "invoice_date_string", nullable = false, length = 40)
+    private String invoiceDateString;
+
+    @Column(name = "invoice_value", nullable = false, precision = 15, scale = 2)
+    private BigDecimal invoiceValue;
 
     @Column(name = "qntd_invoice", nullable = false, precision = 15, scale = 4)
     private BigDecimal qntdInvoice;
@@ -48,6 +60,9 @@ public class Invoice {
     @PrePersist
     // Set the creation timestamp automatically when the record is first persisted.
     protected void onCreate() {
+        if (country == null) country = "";
+        if (invoiceDateString == null) invoiceDateString = "";
+        if (invoiceValue == null) invoiceValue = BigDecimal.ZERO;
         createdAt = LocalDateTime.now();
     }
 }

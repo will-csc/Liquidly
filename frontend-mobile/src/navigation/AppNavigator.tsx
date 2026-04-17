@@ -78,13 +78,15 @@ const ProtectedMainTabs = () => {
 
   useEffect(() => {
     const user = userStorage.getUser();
-    if (!user) {
+    const token = userStorage.getToken();
+    if (!user || !token) {
       navigation.replace('Entry');
     }
   }, [navigation]);
 
   const user = userStorage.getUser();
-  if (!user) return null;
+  const token = userStorage.getToken();
+  if (!user || !token) return null;
   return <MainTabs />;
 };
 
@@ -96,7 +98,13 @@ const AppNavigator = () => {
     (async () => {
       try {
         const user = await userStorage.hydrate();
-        setInitialRouteName(user ? 'Main' : 'Entry');
+        const token = userStorage.getToken();
+        if (user && !token) {
+          await userStorage.clearUser();
+          setInitialRouteName('Entry');
+          return;
+        }
+        setInitialRouteName(user && token ? 'Main' : 'Entry');
       } finally {
         setIsHydrated(true);
       }

@@ -30,6 +30,7 @@ type RequestMeta = { start: number; id: string };
 const IS_TEST = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 const LOG_API = IS_DEV && !IS_TEST;
+const API_TIMEOUT_MS = IS_DEV ? 5000 : 20000;
 
 if (LOG_API) console.log(`[Mobile API] Initializing with URL: ${currentBaseUrl}`);
 
@@ -129,7 +130,7 @@ const logError = (error: AxiosError) => {
 // Create Axios Instance
 const api: AxiosInstance = axios.create({
   baseURL: currentBaseUrl,
-  timeout: 5000, // 5 seconds timeout
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -167,10 +168,21 @@ api.interceptors.response.use(
   },
   async (error: AxiosError) => {
     logError(error);
+    const status = error.response?.status;
+    if (status === 401 || status === 403) {
+      try {
+        await userStorage.clearUser();
+      } catch {}
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.location.reload();
+      }
+      return Promise.reject(error);
+    }
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // If network/connection error and fallback hasn't been tried yet
     if (
+      IS_DEV &&
       !isFallbackActive &&
       originalRequest &&
       !originalRequest._retry &&
@@ -205,7 +217,7 @@ api.interceptors.response.use(
 // Function to check connection status
 export const checkConnection = async () => {
   try {
-    await api.get('/health-check'); // Test endpoint
+    await api.get('/api/users/exists', { params: { email: 'healthcheck@liquidly.app' } });
     console.log(`[Mobile API] Successfully connected to: ${currentBaseUrl}`);
     return true;
   } catch (error) {

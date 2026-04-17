@@ -9,7 +9,6 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Dimensions,
-  Alert,
   FlatList,
   Modal,
 } from 'react-native';
@@ -37,6 +36,8 @@ const Dashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [pendingDeleteUserId, setPendingDeleteUserId] = useState<number | null>(null);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [stats, setStats] = useState({
     totalInvoices: 0,
@@ -205,33 +206,11 @@ const Dashboard = () => {
                   if (isDeletingAccount) return;
                   const user = userStorage.getUser();
                   if (!user?.id) {
-                    Alert.alert(t('common.error'), t('dashboard.userNotFound'));
+                    setErrorMessage(t('dashboard.userNotFound'));
                     return;
                   }
-
-                  Alert.alert(
-                    t('dashboard.deleteConfirmTitle'),
-                    t('dashboard.deleteConfirmBody'),
-                    [
-                      { text: t('common.cancel'), style: 'cancel' },
-                      {
-                        text: t('dashboard.deleteAccount'),
-                        style: 'destructive',
-                        onPress: async () => {
-                          setIsDeletingAccount(true);
-                          try {
-                            await userService.delete(user.id);
-                            await userStorage.clearUser();
-                            navigation.replace('Entry');
-                          } catch (error) {
-                            setErrorMessage(getErrorMessage(error, 'Falha ao excluir a conta'));
-                          } finally {
-                            setIsDeletingAccount(false);
-                          }
-                        },
-                      },
-                    ]
-                  );
+                  setPendingDeleteUserId(user.id);
+                  setDeleteModalVisible(true);
                 }}
                 style={[styles.actionButton, styles.deleteButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
                 disabled={isDeletingAccount}
@@ -317,6 +296,51 @@ const Dashboard = () => {
         )}
         <ErrorOverlay message={errorMessage} title="Error" onClose={() => setErrorMessage(null)} />
       </ScrollView>
+
+      <Modal visible={deleteModalVisible} transparent animationType="fade" onRequestClose={() => setDeleteModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <ModalHeader title={t('dashboard.deleteConfirmTitle')} onClose={() => setDeleteModalVisible(false)} />
+            <View style={styles.confirmBody}>
+              <Text style={styles.confirmText}>{t('dashboard.deleteConfirmBody')}</Text>
+              <View style={styles.confirmActions}>
+                <TouchableOpacity
+                  onPress={() => setDeleteModalVisible(false)}
+                  style={[styles.confirmButton, styles.confirmCancel]}
+                  disabled={isDeletingAccount}
+                >
+                  <Text style={[styles.confirmButtonText, styles.confirmCancelText]}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (isDeletingAccount) return;
+                    if (!pendingDeleteUserId) {
+                      setErrorMessage(t('dashboard.userNotFound'));
+                      setDeleteModalVisible(false);
+                      return;
+                    }
+                    setIsDeletingAccount(true);
+                    try {
+                      await userService.delete(pendingDeleteUserId);
+                      await userStorage.clearUser();
+                      setDeleteModalVisible(false);
+                      navigation.replace('Entry');
+                    } catch (error) {
+                      setErrorMessage(getErrorMessage(error, 'Falha ao excluir a conta'));
+                    } finally {
+                      setIsDeletingAccount(false);
+                    }
+                  }}
+                  style={[styles.confirmButton, styles.confirmDelete, isDeletingAccount ? styles.actionButtonDisabled : null]}
+                  disabled={isDeletingAccount}
+                >
+                  <Text style={styles.confirmButtonText}>{isDeletingAccount ? t('dashboard.deleting') : t('dashboard.deleteAccount')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={languageModalVisible} transparent animationType="fade" onRequestClose={() => setLanguageModalVisible(false)}>
         <View style={styles.modalOverlay}>
@@ -418,6 +442,42 @@ const styles = StyleSheet.create({
   modalSeparator: {
     height: 1,
     backgroundColor: '#f2f2f2',
+  },
+  confirmBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 4,
+  },
+  confirmText: {
+    color: theme.colors.text,
+    lineHeight: 20,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmCancel: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  confirmCancelText: {
+    color: theme.colors.text,
+  },
+  confirmDelete: {
+    backgroundColor: '#d92d20',
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });
 

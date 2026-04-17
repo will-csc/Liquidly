@@ -183,20 +183,25 @@ def _insert_invoice_and_po(cur, company_id: int, project_id: int):
     if not bom:
         return None
 
+    item_code = str(bom["item_code"]).strip()
     um = bom["um_bom"]
     base_qty = bom["remaining_qntd"] if bom["remaining_qntd"] is not None else bom["qntd"]
     base_qty = Decimal(str(base_qty)) if base_qty is not None else Decimal("10")
     qty = _random_qty(max_qty=max(base_qty, Decimal("0.01")))
+    unit_price = Decimal(str(random.uniform(10, 200))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    invoice_value = (qty * unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    country = "BR"
+    invoice_date_string = datetime.now().strftime("%Y-%m-%d")
 
     invoice_number = f"INV-{int(time.time())}-{random.randint(1000, 9999)}"
 
     cur.execute(
         """
-        INSERT INTO invoices (project_id, invoice_number, qntd_invoice, um_invoice, remaining_qntd, company_id, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        INSERT INTO invoices (project_id, item_code, invoice_number, country, invoice_date_string, invoice_value, qntd_invoice, um_invoice, remaining_qntd, company_id, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
         RETURNING id
         """,
-        (project_id, invoice_number, qty, um, qty, company_id),
+        (project_id, item_code, invoice_number, country, invoice_date_string, invoice_value, qty, um, qty, company_id),
     )
     invoice_id = cur.fetchone()["id"]
 
@@ -236,9 +241,14 @@ def _build_liquidation_report_excel(rows, filters):
         "qntd_consumed_bom",
         "remaining_qntd",
         "invoice_number",
+        "invoice_country",
+        "invoice_date_string",
+        "invoice_value",
         "um_invoice",
         "qntd_invoice",
+        "consumed_invoice_value",
         "qntd_consumed_invoice",
+        "remaining_invoice_value",
         "remaining_qntd_invoice",
         "po_number",
         "um_po",
@@ -264,13 +274,18 @@ def _build_liquidation_report_excel(rows, filters):
         "qntd_consumed_po",
         "remaining_qntd_po",
     }
+    money_cols = {
+        "invoice_value",
+        "consumed_invoice_value",
+        "remaining_invoice_value",
+    }
     for idx, h in enumerate(headers, start=1):
-        if h in numeric_cols:
+        if h in numeric_cols or h in money_cols:
             for r in range(2, ws.max_row + 1):
                 cell = ws.cell(row=r, column=idx)
                 if cell.value is None:
                     continue
-                cell.number_format = "0.0000"
+                cell.number_format = "0.00" if h in money_cols else "0.0000"
 
     widths = {}
     for row in ws.iter_rows(values_only=True):
@@ -315,9 +330,14 @@ def _fetch_liquidation_rows(company_id: int, project_id: int, item_code: str = N
                         lr.qntd_consumed_bom,
                         lr.remaining_qntd,
                         lr.invoice_number,
+                        lr.invoice_country,
+                        lr.invoice_date_string,
+                        lr.invoice_value,
                         lr.um_invoice,
                         lr.qntd_invoice,
+                        lr.consumed_invoice_value,
                         lr.qntd_consumed_invoice,
+                        lr.remaining_invoice_value,
                         lr.remaining_qntd_invoice,
                         lr.po_number,
                         lr.um_po,

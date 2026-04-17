@@ -1,8 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, ViewStyle, Dimensions } from 'react-native';
+import { View, StyleSheet, Image, ViewStyle, useWindowDimensions } from 'react-native';
 import { theme } from '../styles/theme';
-
-const { width, height } = Dimensions.get('window');
 
 interface ScreenLayoutProps {
   children: React.ReactNode;
@@ -17,18 +15,21 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
   headerContent, 
   style 
 }) => {
+  const { height: windowHeight } = useWindowDimensions();
+  const topSectionHeight = Math.max(220, windowHeight * 0.35);
+
   return (
     <View style={[styles.container, style]}>
-      {backgroundImage && (
-        <View style={styles.topSection}>
-          <Image 
-            source={backgroundImage} 
-            style={styles.backgroundImage}
-            resizeMode="cover"
-          />
+      {backgroundImage || headerContent ? (
+        <View style={[styles.topSection, { height: topSectionHeight }]}>
+          {backgroundImage ? (
+            <Image source={backgroundImage} style={styles.backgroundImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.topFallback} />
+          )}
           {headerContent}
         </View>
-      )}
+      ) : null}
       
       <View style={styles.bottomSection}>
         {children}
@@ -43,13 +44,16 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   topSection: {
-    height: height * 0.35,
     width: '100%',
     position: 'relative',
   },
   backgroundImage: {
     width: '100%',
     height: '100%',
+  },
+  topFallback: {
+    flex: 1,
+    backgroundColor: theme.colors.primary,
   },
   bottomSection: {
     flex: 1,

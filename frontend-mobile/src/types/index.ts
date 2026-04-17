@@ -60,7 +60,11 @@ export interface Conversion {
 
 export interface Invoice {
   id?: number;
+  itemCode?: string;
   invoiceNumber: string;
+  country?: string;
+  invoiceDateString?: string;
+  invoiceValue?: number;
   qntdInvoice: number;
   umInvoice: string;
   remainingQntd: number;
