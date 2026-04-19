@@ -35,6 +35,7 @@ const Report = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [boms, setBoms] = useState<Bom[]>([]);
   const [loading, setLoading] = useState(false);
+  const [runningReport, setRunningReport] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Form State
@@ -117,7 +118,7 @@ const Report = () => {
       return;
     }
 
-    setLoading(true);
+    setRunningReport(true);
     try {
       await liquidationResultService.runReport({
         companyId: user.companyId,
@@ -133,7 +134,7 @@ const Report = () => {
       console.error('Failed to run report:', error);
       setErrorMessage(getErrorMessage(error, t('report.runFailed')));
     } finally {
-      setLoading(false);
+      setRunningReport(false);
     }
   };
 
@@ -185,9 +186,9 @@ const Report = () => {
 
           <View style={styles.buttonContainer}>
             <Button
-              title={t('report.button.run')}
+              title={runningReport ? t('report.button.running') : t('report.button.run')}
               onPress={handleRunReport}
-              loading={loading}
+              loading={runningReport}
             />
             <IconNote iconName="mail-outline" text={t('report.helper.emailSent')} />
           </View>

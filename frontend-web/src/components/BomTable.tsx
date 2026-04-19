@@ -144,8 +144,7 @@ const BomTable = () => {
     setEditDraft(null);
   };
 
-  const saveEdit = () => {
-    // TODO: Implement update API
+  const saveEdit = async () => {
     if (!editDraft) return;
     if (!editDraft.projectId) {
       showNotice("error", "Selecione o projeto.");
@@ -190,8 +189,38 @@ const BomTable = () => {
       projectName: project?.name ?? editDraft.projectName,
       remainingQntd: editDraft.qntd,
     };
-    setItems((prev) => prev.map((i) => (i.id === editDraft.id ? safeDraft : i)));
-    cancelEdit();
+
+    try {
+      const updated = await bomService.update(parseInt(editDraft.id, 10), {
+        projectName: safeDraft.projectName,
+        itemCode: safeDraft.itemCode,
+        itemName: safeDraft.itemName,
+        qntd: safeDraft.qntd,
+        umBom: safeDraft.umBom,
+        remainingQntd: safeDraft.remainingQntd,
+        project: safeDraft.projectId != null ? { id: safeDraft.projectId } : undefined,
+        company: safeDraft.companyId != null ? { id: safeDraft.companyId } : undefined,
+      });
+
+      const updatedItem: BomRow = {
+        id: updated.id?.toString() || editDraft.id,
+        projectId: updated.project?.id ?? safeDraft.projectId,
+        projectName: updated.projectName || updated.project?.name || safeDraft.projectName,
+        itemCode: updated.itemCode,
+        itemName: updated.itemName,
+        qntd: typeof updated.qntd === "number" ? updated.qntd : Number(updated.qntd),
+        umBom: updated.umBom,
+        remainingQntd: updated.remainingQntd ?? safeDraft.remainingQntd,
+        companyId: updated.company?.id ?? safeDraft.companyId,
+        createdAt: updated.createdAt ?? safeDraft.createdAt,
+      };
+
+      setItems((prev) => prev.map((i) => (i.id === editDraft.id ? updatedItem : i)));
+      cancelEdit();
+    } catch (error) {
+      console.error("Failed to update item", error);
+      showNotice("error", "Falha ao salvar alterações.");
+    }
   };
 
   const requestDelete = (item: BomRow) => {
@@ -570,7 +599,6 @@ const BomTable = () => {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => renderRow(item))}
               {adding && (
                 <tr className="bg-primary/5 border-b border-border/50 animate-in fade-in">
                   <td className="py-2 px-2">
@@ -619,6 +647,7 @@ const BomTable = () => {
                   </td>
                 </tr>
               )}
+              {items.map((item) => renderRow(item))}
             </tbody>
           </table>
           {items.length === 0 && !loading && !adding && (

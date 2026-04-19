@@ -66,6 +66,10 @@ const clearSession = () => {
   }
 };
 
+const redirectToLanding = () => {
+  window.location.replace("/");
+};
+
 const ControlPanelNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -106,8 +110,8 @@ const ControlPanelNav = () => {
     try {
       await userService.delete(user.id);
       clearSession();
-      navigate("/login", { replace: true });
       setIsDeleteOpen(false);
+      redirectToLanding();
     } catch (error) {
       console.error("Failed to delete account", error);
       setDeleteError("Falha ao deletar. Tente novamente.");
@@ -169,8 +173,8 @@ const ControlPanelNav = () => {
                 className="w-full text-left px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors flex items-center gap-3 font-medium"
                 onClick={() => {
                   clearSession();
-                  navigate("/login", { replace: true });
                   setIsMenuOpen(false);
+                  redirectToLanding();
                 }}
               >
                 <SafeIcon icon={LogOut} fallbackSrc={logoutIcon} className="w-4 h-4" />
@@ -191,7 +195,7 @@ const ControlPanelNav = () => {
           <div className="w-full max-w-sm rounded-xl border border-border bg-card p-4 shadow-elevated">
             <div className="text-base font-semibold text-foreground">{t("nav.deleteAccount")}</div>
             <div className="mt-1 text-sm text-muted-foreground">
-              Tem certeza que deseja deletar sua conta? Essa ação não pode ser desfeita.
+              Tem certeza que deseja excluir sua conta? Se esta for a última conta da empresa, os dados vinculados também serão removidos. Essa ação não pode ser desfeita.
             </div>
             {deleteError && <div className="mt-3 text-sm text-destructive">{deleteError}</div>}
             <div className="mt-4 flex justify-end gap-2">
@@ -199,7 +203,7 @@ const ControlPanelNav = () => {
                 Cancelar
               </Button>
               <Button variant="destructive" type="button" disabled={isDeleting} onClick={confirmDelete}>
-                Deletar
+                {isDeleting ? "Excluindo..." : "Deletar"}
               </Button>
             </div>
           </div>

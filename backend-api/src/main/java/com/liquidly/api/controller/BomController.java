@@ -22,6 +22,12 @@ public class BomController {
         return ResponseEntity.ok(bomService.createBom(bom));
     }
 
+    // Update an existing BOM entry.
+    @PutMapping("/{id}")
+    public ResponseEntity<Bom> updateBom(@PathVariable Long id, @RequestBody Bom bom) {
+        return ResponseEntity.ok(bomService.updateBom(id, bom));
+    }
+
     // Return all BOM entries.
     @GetMapping
     public ResponseEntity<List<Bom>> getAllBoms() {

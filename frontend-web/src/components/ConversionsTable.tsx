@@ -214,8 +214,7 @@ const ConversionsTable = () => {
   const startEdit = (item: ConversionRow) => { setEditingId(item.id); setEditDraft({ ...item }); };
   const cancelEdit = () => { setEditingId(null); setEditDraft(null); };
   
-  const saveEdit = () => { 
-    // TODO: Implement update API
+  const saveEdit = async () => { 
     if (!editDraft) return;
     const normalizedCode = normalizeItemCode(editDraft.itemCode);
     const bomUm = bomUmByItemCode[normalizedCode];
@@ -235,8 +234,39 @@ const ConversionsTable = () => {
       return;
     }
     const safeDraft = { ...editDraft, umBom: bomUm };
-    setItems((p) => p.map((i) => (i.id === editDraft.id ? safeDraft : i)));
-    cancelEdit(); 
+
+    try {
+      const updated = await conversionService.update(parseInt(editDraft.id, 10), {
+        itemCode: safeDraft.itemCode,
+        qntdInvoice: safeDraft.qntdInvoice,
+        umInvoice: safeDraft.umInvoice,
+        qntdBom: safeDraft.qntdBom,
+        umBom: safeDraft.umBom,
+        company: safeDraft.companyId != null ? { id: safeDraft.companyId } : undefined,
+      });
+
+      const updatedItem: ConversionRow = {
+        id: updated.id?.toString() || editDraft.id,
+        itemCode: updated.itemCode || safeDraft.itemCode,
+        qntdInvoice: updated.qntdInvoice ?? safeDraft.qntdInvoice,
+        umInvoice: updated.umInvoice,
+        qntdBom: updated.qntdBom ?? safeDraft.qntdBom,
+        umBom: updated.umBom || safeDraft.umBom,
+        conversionFactor:
+          updated.conversionFactor ??
+          ((updated.qntdInvoice ?? safeDraft.qntdInvoice) === 0
+            ? 0
+            : (updated.qntdBom ?? safeDraft.qntdBom) / (updated.qntdInvoice ?? safeDraft.qntdInvoice)),
+        companyId: updated.company?.id ?? safeDraft.companyId,
+        createdAt: updated.createdAt ?? safeDraft.createdAt,
+      };
+
+      setItems((p) => p.map((i) => (i.id === editDraft.id ? updatedItem : i)));
+      cancelEdit();
+    } catch (error) {
+      console.error("Failed to update conversion", error);
+      showNotice("error", "Falha ao salvar conversão.");
+    }
   };
   
   const requestDelete = (item: ConversionRow) => {

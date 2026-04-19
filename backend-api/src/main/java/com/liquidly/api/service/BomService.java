@@ -39,6 +39,36 @@ public class BomService {
         return bomRepository.save(bom);
     }
 
+    // Update an existing BOM entry while preserving immutable metadata when omitted.
+    public Bom updateBom(Long id, Bom bom) {
+        Bom existing = getBomById(id);
+
+        if (bom == null) {
+            throw new RuntimeException("BOM is required");
+        }
+
+        existing.setProject(bom.getProject() != null ? bom.getProject() : existing.getProject());
+
+        String projectName = bom.getProjectName();
+        if (projectName != null && !projectName.trim().isEmpty()) {
+            existing.setProjectName(projectName.trim());
+        } else if (existing.getProject() != null && existing.getProject().getName() != null && !existing.getProject().getName().trim().isEmpty()) {
+            existing.setProjectName(existing.getProject().getName().trim());
+        }
+
+        existing.setItemCode(bom.getItemCode());
+        existing.setItemName(bom.getItemName());
+        existing.setUmBom(bom.getUmBom());
+        existing.setQntd(bom.getQntd() == null ? BigDecimal.ZERO : bom.getQntd());
+        existing.setRemainingQntd(bom.getRemainingQntd() == null ? existing.getQntd() : bom.getRemainingQntd());
+
+        if (bom.getCompany() != null && bom.getCompany().getId() != null) {
+            existing.setCompany(bom.getCompany());
+        }
+
+        return bomRepository.save(existing);
+    }
+
     // Return all BOM entries.
     public List<Bom> getAllBoms() {
         return bomRepository.findAll();

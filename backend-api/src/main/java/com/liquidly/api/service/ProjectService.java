@@ -38,6 +38,42 @@ public class ProjectService {
         return projectRepository.save(project);
     }
 
+    // Update an existing project, preserving its company when the payload omits it.
+    public Project updateProject(Long id, Project project) {
+        Project existing = getProjectById(id);
+
+        if (project == null) {
+            throw new RuntimeException("Project is required");
+        }
+
+        Long companyId =
+                project.getCompany() != null && project.getCompany().getId() != null
+                        ? project.getCompany().getId()
+                        : existing.getCompany() != null
+                                ? existing.getCompany().getId()
+                                : null;
+
+        if (companyId == null) {
+            throw new RuntimeException("Company is required");
+        }
+
+        String normalizedName = project.getName() == null ? "" : project.getName().trim();
+        if (normalizedName.isEmpty()) {
+            throw new RuntimeException("Project name is required");
+        }
+
+        if (projectRepository.existsByNameIgnoreCaseAndCompanyIdAndIdNot(normalizedName, companyId, id)) {
+            throw new RuntimeException("Project name already in use");
+        }
+
+        existing.setName(normalizedName);
+        if (project.getCompany() != null && project.getCompany().getId() != null) {
+            existing.setCompany(project.getCompany());
+        }
+
+        return projectRepository.save(existing);
+    }
+
     // Return all projects.
     public List<Project> getAllProjects() {
         return projectRepository.findAll();

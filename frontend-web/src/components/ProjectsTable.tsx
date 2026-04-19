@@ -83,8 +83,7 @@ const ProjectsTable = () => {
     setEditDraft(null);
   };
 
-  const saveEdit = () => {
-    // TODO: Implement update API
+  const saveEdit = async () => {
     if (!editDraft || !editDraft.id) return;
     const name = normalizeProjectName(editDraft.name || "");
     if (!name) return;
@@ -93,8 +92,18 @@ const ProjectsTable = () => {
       showNotice("error", "Já existe um projeto com esse nome.");
       return;
     }
-    setItems((prev) => prev.map((i) => (i.id === editDraft.id ? editDraft : i)));
-    cancelEdit();
+
+    try {
+      const updated = await projectService.update(editDraft.id, {
+        name: editDraft.name.trim(),
+        company: editDraft.company,
+      });
+      setItems((prev) => prev.map((i) => (i.id === editDraft.id ? updated : i)));
+      cancelEdit();
+    } catch (error) {
+      console.error("Failed to update project", error);
+      showNotice("error", "Falha ao salvar projeto.");
+    }
   };
 
   const requestDelete = (project: Project) => {

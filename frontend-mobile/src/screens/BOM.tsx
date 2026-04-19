@@ -147,7 +147,8 @@ const BOM = () => {
       };
 
       if (editingItem && editingItem.id) {
-        Alert.alert(t('common.ok'), t('bom.updateNotImplemented'));
+        const updated = await bomService.update(editingItem.id, bomData);
+        setItems((current) => current.map((item) => (item.id === editingItem.id ? updated : item)));
       } else {
         const created = await bomService.create(bomData);
         setItems((current) => [...current, created]);
@@ -213,7 +214,10 @@ const BOM = () => {
       />
 
       {loading ? (
-        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 20 }} />
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 20 }} />
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
+        </View>
       ) : (
         <FlatList
           data={items}
@@ -302,6 +306,15 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 15,
+  },
+  loadingState: {
+    marginTop: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    color: theme.colors.textLight,
+    fontSize: 14,
   },
   emptyList: {
     flexGrow: 1,

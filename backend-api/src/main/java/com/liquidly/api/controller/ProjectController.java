@@ -22,6 +22,12 @@ public class ProjectController {
         return ResponseEntity.ok(projectService.createProject(project));
     }
 
+    // Update an existing project.
+    @PutMapping("/{id}")
+    public ResponseEntity<Project> updateProject(@PathVariable Long id, @RequestBody Project project) {
+        return ResponseEntity.ok(projectService.updateProject(id, project));
+    }
+
     // Return all projects.
     @GetMapping
     public ResponseEntity<List<Project>> getAllProjects() {

@@ -5,6 +5,7 @@ import com.liquidly.api.repository.ConversionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +18,27 @@ public class ConversionService {
     // Persist a conversion record.
     public Conversion createConversion(Conversion conversion) {
         return conversionRepository.save(conversion);
+    }
+
+    // Update an existing conversion entry while preserving company when omitted.
+    public Conversion updateConversion(Long id, Conversion conversion) {
+        Conversion existing = getConversionById(id);
+
+        if (conversion == null) {
+            throw new RuntimeException("Conversion is required");
+        }
+
+        existing.setItemCode(conversion.getItemCode());
+        existing.setQntdInvoice(conversion.getQntdInvoice() == null ? BigDecimal.ZERO : conversion.getQntdInvoice());
+        existing.setUmInvoice(conversion.getUmInvoice());
+        existing.setQntdBom(conversion.getQntdBom() == null ? BigDecimal.ZERO : conversion.getQntdBom());
+        existing.setUmBom(conversion.getUmBom());
+
+        if (conversion.getCompany() != null && conversion.getCompany().getId() != null) {
+            existing.setCompany(conversion.getCompany());
+        }
+
+        return conversionRepository.save(existing);
     }
 
     // Return all conversion records.

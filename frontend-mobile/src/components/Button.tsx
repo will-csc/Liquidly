@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator, View } from 'react-native';
 import { theme } from '../styles/theme';
 
 interface ButtonProps {
@@ -51,7 +51,10 @@ const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? theme.colors.white : theme.colors.primary} />
+        <View style={styles.loadingContent}>
+          <ActivityIndicator color={variant === 'primary' ? theme.colors.white : theme.colors.primary} />
+          <Text style={[styles.text, getTextStyle(), textStyle]}>{title}</Text>
+        </View>
       ) : (
         <Text style={[styles.text, getTextStyle(), textStyle]}>{title}</Text>
       )}
@@ -85,6 +88,11 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   primaryText: {
     color: theme.colors.white,

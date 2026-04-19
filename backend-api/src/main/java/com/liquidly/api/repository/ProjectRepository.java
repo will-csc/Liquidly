@@ -13,5 +13,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     List<Project> findByCompany(Company company);
     List<Project> findByCompanyId(Long companyId);
     boolean existsByNameIgnoreCaseAndCompanyId(String name, Long companyId);
+    boolean existsByNameIgnoreCaseAndCompanyIdAndIdNot(String name, Long companyId, Long id);
     void deleteByCompanyId(Long companyId);
 }

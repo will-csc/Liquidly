@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ScrollView,
-  Alert,
   Modal,
   Image,
   Switch
@@ -99,9 +98,7 @@ const SignUp = ({ navigation }: any) => {
         companyName: company,
         faceImage: faceImage || undefined
       });
-      Alert.alert(t('signup.successTitle'), t('signup.successBody'), [
-        { text: t('common.ok'), onPress: () => navigation.navigate('SignIn') }
-      ]);
+      navigation.replace('SignIn');
     } catch (error: any) {
       console.error('Sign up failed:', error);
       setErrorMessage(getErrorMessage(error, t('signup.createFailed')));

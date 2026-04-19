@@ -84,18 +84,21 @@ const Projects = () => {
       return;
     }
 
-    if (editingItem?.id) {
-      Alert.alert(t('common.ok'), t('projects.updateNotImplemented'));
-      return;
-    }
-
     try {
       const user = userStorage.getUser();
-      const created = await projectService.create({
+      const payload: Project = {
         name: trimmedName,
-        company: user && user.companyId ? { id: user.companyId } : undefined,
-      });
-      setItems((current) => [...current, created]);
+        company: user && user.companyId ? { id: user.companyId } : editingItem?.company,
+      };
+
+      if (editingItem?.id) {
+        const updated = await projectService.update(editingItem.id, payload);
+        setItems((current) => current.map((item) => (item.id === editingItem.id ? updated : item)));
+      } else {
+        const created = await projectService.create(payload);
+        setItems((current) => [...current, created]);
+      }
+
       setModalVisible(false);
       setProjectName('');
       setEditingItem(null);
@@ -152,7 +155,10 @@ const Projects = () => {
       />
 
       {loading ? (
-        <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loading} />
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loading} />
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
+        </View>
       ) : (
         <FlatList
           data={items}
@@ -197,6 +203,15 @@ const styles = StyleSheet.create({
   },
   loading: {
     marginTop: 20,
+  },
+  loadingState: {
+    marginTop: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    color: theme.colors.textLight,
+    fontSize: 14,
   },
   listContent: {
     padding: 15,

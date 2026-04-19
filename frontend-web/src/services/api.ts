@@ -202,7 +202,7 @@ export const authService = {
   },
   
   signup: async (data: SignupRequest): Promise<User> => {
-    const response = await api.post<User>('/api/users/signup', data);
+    const response = await api.post<User>('/api/users/signup', data, { timeout: 60000 });
     return response.data;
   },
 
@@ -222,7 +222,7 @@ export const authService = {
 
 export const userService = {
   delete: async (id: number): Promise<void> => {
-    await api.delete(`/api/users/${id}`);
+    await api.delete(`/api/users/${id}`, { timeout: 60000 });
   },
 };
 
@@ -239,6 +239,11 @@ export const bomService = {
 
   create: async (data: Bom): Promise<Bom> => {
     const response = await api.post<Bom>('/api/boms', data);
+    return response.data;
+  },
+
+  update: async (id: number, data: Bom): Promise<Bom> => {
+    const response = await api.put<Bom>(`/api/boms/${id}`, data);
     return response.data;
   },
 
@@ -260,6 +265,11 @@ export const conversionService = {
 
   create: async (data: Conversion): Promise<Conversion> => {
     const response = await api.post<Conversion>('/api/conversions', data);
+    return response.data;
+  },
+
+  update: async (id: number, data: Conversion): Promise<Conversion> => {
+    const response = await api.put<Conversion>(`/api/conversions/${id}`, data);
     return response.data;
   },
 
@@ -323,6 +333,11 @@ export const projectService = {
 
   create: async (data: Project): Promise<Project> => {
     const response = await api.post<Project>('/api/projects', data);
+    return response.data;
+  },
+
+  update: async (id: number, data: Project): Promise<Project> => {
+    const response = await api.put<Project>(`/api/projects/${id}`, data);
     return response.data;
   },
 

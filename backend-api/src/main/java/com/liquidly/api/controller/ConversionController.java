@@ -22,6 +22,12 @@ public class ConversionController {
         return ResponseEntity.ok(conversionService.createConversion(conversion));
     }
 
+    // Update an existing conversion record.
+    @PutMapping("/{id}")
+    public ResponseEntity<Conversion> updateConversion(@PathVariable Long id, @RequestBody Conversion conversion) {
+        return ResponseEntity.ok(conversionService.updateConversion(id, conversion));
+    }
+
     // Return all conversion records.
     @GetMapping
     public ResponseEntity<List<Conversion>> getAllConversions() {

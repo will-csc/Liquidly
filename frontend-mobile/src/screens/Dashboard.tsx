@@ -179,6 +179,13 @@ const Dashboard = () => {
     fetchData();
   };
 
+  const goToEntry = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Entry' }],
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
@@ -224,7 +231,7 @@ const Dashboard = () => {
                 onPress={async () => {
                   if (isDeletingAccount) return;
                   await userStorage.clearUser();
-                  navigation.replace('Entry');
+                  goToEntry();
                 }}
                 style={[styles.actionButton, styles.logoutButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
                 disabled={isDeletingAccount}
@@ -236,7 +243,10 @@ const Dashboard = () => {
         />
 
         {loading ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 50 }} />
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.loadingText}>{t('common.loading')}</Text>
+          </View>
         ) : (
           <View style={styles.dashboardContainer}>
             <View style={styles.kpiContainer}>
@@ -294,7 +304,7 @@ const Dashboard = () => {
             )}
           </View>
         )}
-        <ErrorOverlay message={errorMessage} title="Error" onClose={() => setErrorMessage(null)} />
+        <ErrorOverlay message={errorMessage} title={t('common.error')} onClose={() => setErrorMessage(null)} />
       </ScrollView>
 
       <Modal visible={deleteModalVisible} transparent animationType="fade" onRequestClose={() => setDeleteModalVisible(false)}>
@@ -324,7 +334,7 @@ const Dashboard = () => {
                       await userService.delete(pendingDeleteUserId);
                       await userStorage.clearUser();
                       setDeleteModalVisible(false);
-                      navigation.replace('Entry');
+                      goToEntry();
                     } catch (error) {
                       setErrorMessage(getErrorMessage(error, 'Falha ao excluir a conta'));
                     } finally {
@@ -414,6 +424,15 @@ const styles = StyleSheet.create({
   },
   dashboardContainer: {
     marginTop: 10,
+  },
+  loadingState: {
+    marginTop: 50,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    color: theme.colors.textLight,
+    fontSize: 14,
   },
   kpiContainer: {
     flexDirection: 'row',
