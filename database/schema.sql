@@ -95,7 +95,7 @@ CREATE TABLE pos (
     po_number VARCHAR(100), -- Numero da PO, sem FK
     item_code VARCHAR(100) NOT NULL,
     po_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
-    qntd_invoice NUMERIC(15, 4) NOT NULL,
+    qntd_po NUMERIC(15, 4) NOT NULL,
     um_po VARCHAR(20) NOT NULL,
     remaining_qntd NUMERIC(15, 4) NOT NULL DEFAULT 0,
     company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE, -- Added for multi-tenancy isolation
