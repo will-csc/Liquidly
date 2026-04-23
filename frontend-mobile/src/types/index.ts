@@ -67,6 +67,10 @@ export interface Conversion {
 
 export interface Invoice {
   id?: number;
+  project?: {
+    id: number;
+    name?: string;
+  };
   itemCode?: string;
   invoiceNumber: string;
   country?: string;

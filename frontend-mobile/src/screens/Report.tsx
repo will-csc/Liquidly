@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { theme } from '../styles/theme';
 import { useI18n } from '../i18n/i18n';
-import { projectService, bomService, liquidationResultService } from '../services/api';
+import { projectService, bomService, invoiceService, poService, liquidationResultService } from '../services/api';
 import { userStorage } from '../services/userStorage';
-import { Project, Bom } from '../types';
+import { Project, Bom, Invoice, Po } from '../types';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
@@ -34,6 +34,8 @@ const Report = () => {
   const { t } = useI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [boms, setBoms] = useState<Bom[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [pos, setPos] = useState<Po[]>([]);
   const [loading, setLoading] = useState(false);
   const [runningReport, setRunningReport] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -58,22 +60,28 @@ const Report = () => {
     setLoading(true);
     try {
       const user = userStorage.getUser();
-      let projectsData: Project[] = [], bomsData: Bom[] = [];
+      let projectsData: Project[] = [], bomsData: Bom[] = [], invoicesData: Invoice[] = [], posData: Po[] = [];
 
       if (user && user.companyId) {
-        [projectsData, bomsData] = await Promise.all([
+        [projectsData, bomsData, invoicesData, posData] = await Promise.all([
           projectService.getByCompany(user.companyId),
           bomService.getByCompany(user.companyId),
+          invoiceService.getByCompany(user.companyId),
+          poService.getByCompany(user.companyId),
         ]);
       } else {
-        [projectsData, bomsData] = await Promise.all([
+        [projectsData, bomsData, invoicesData, posData] = await Promise.all([
           projectService.getAll(),
           bomService.getAll(),
+          invoiceService.getAll(),
+          poService.getAll(),
         ]);
       }
 
       setProjects(projectsData);
       setBoms(bomsData);
+      setInvoices(invoicesData);
+      setPos(posData);
     } catch (error) {
       console.error('Failed to fetch report data', error);
       setErrorMessage(getErrorMessage(error, t('report.loadFailed')));
@@ -118,11 +126,32 @@ const Report = () => {
       return;
     }
 
+    const selectedProjectId = Number(selectedProject.value);
+    const projectBoms = boms.filter(
+      (bom) => bom.project?.id === selectedProjectId || bom.projectName === selectedProject.label
+    );
+    const projectInvoices = invoices.filter((invoice) => invoice.project?.id === selectedProjectId);
+
+    if (projectInvoices.length === 0) {
+      setErrorMessage(t('report.noInvoices'));
+      return;
+    }
+
+    if (pos.length === 0) {
+      setErrorMessage(t('report.noPos'));
+      return;
+    }
+
+    if (projectBoms.length === 0) {
+      setErrorMessage(t('report.noBomData'));
+      return;
+    }
+
     setRunningReport(true);
     try {
       await liquidationResultService.runReport({
         companyId: user.companyId,
-        projectId: Number(selectedProject.value),
+        projectId: selectedProjectId,
         email: user.email,
         selectedBom: selectedBom?.value ? String(selectedBom.value) : undefined,
         startDate: startDate || undefined,

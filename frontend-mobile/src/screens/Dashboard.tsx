@@ -13,6 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../styles/theme';
 import { invoiceService, poService, bomService, userService } from '../services/api';
 import { userStorage } from '../services/userStorage';
@@ -204,9 +205,16 @@ const Dashboard = () => {
                 style={[styles.actionButton, styles.languageButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
                 disabled={isDeletingAccount}
               >
-                <Text style={styles.languageText}>
-                  {t('language.title')}: {currentLanguageLabel}
-                </Text>
+                <View style={styles.actionContent}>
+                  <View style={[styles.actionIconWrap, styles.languageIconWrap]}>
+                    <Ionicons name="language-outline" size={18} color={theme.colors.primary} />
+                  </View>
+                  <View style={styles.actionLabelWrap}>
+                    <Text style={styles.actionLabel}>{t('language.title')}</Text>
+                    <Text style={styles.languageText}>{currentLanguageLabel}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textLight} />
+                </View>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -222,9 +230,17 @@ const Dashboard = () => {
                 style={[styles.actionButton, styles.deleteButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
                 disabled={isDeletingAccount}
               >
-                <Text style={styles.actionText}>
-                  {isDeletingAccount ? t('dashboard.deleting') : t('dashboard.deleteAccount')}
-                </Text>
+                <View style={styles.actionContent}>
+                  <View style={[styles.actionIconWrap, styles.deleteIconWrap]}>
+                    <Ionicons name="trash-outline" size={18} color="#d92d20" />
+                  </View>
+                  <View style={styles.actionLabelWrap}>
+                    <Text style={styles.actionLabel}>{t('dashboard.deleteAccount')}</Text>
+                    <Text style={styles.actionDescription}>
+                      {isDeletingAccount ? t('dashboard.deleting') : t('dashboard.deleteConfirmTitle')}
+                    </Text>
+                  </View>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -236,7 +252,15 @@ const Dashboard = () => {
                 style={[styles.actionButton, styles.logoutButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
                 disabled={isDeletingAccount}
               >
-                <Text style={styles.actionText}>{t('dashboard.logout')}</Text>
+                <View style={styles.actionContent}>
+                  <View style={[styles.actionIconWrap, styles.logoutIconWrap]}>
+                    <Ionicons name="log-out-outline" size={18} color={theme.colors.primary} />
+                  </View>
+                  <View style={styles.actionLabelWrap}>
+                    <Text style={styles.actionLabel}>{t('dashboard.logout')}</Text>
+                    <Text style={styles.actionDescription}>{t('dashboard.subtitle')}</Text>
+                  </View>
+                </View>
               </TouchableOpacity>
             </View>
           }
@@ -388,39 +412,71 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   headerActions: {
-    alignItems: 'flex-end',
+    width: '100%',
+    marginTop: 16,
+    gap: 10,
   },
   actionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    width: '100%',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
   },
   actionButtonDisabled: {
     opacity: 0.6,
   },
   deleteButton: {
-    backgroundColor: '#d92d20',
-    marginBottom: 8,
+    backgroundColor: '#fff7f6',
+    borderColor: '#f4c7c3',
   },
   logoutButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#f6fbf8',
+    borderColor: '#cfe5d8',
   },
   languageButton: {
-    borderWidth: 1,
     borderColor: '#e5e7eb',
     backgroundColor: '#fff',
-    marginBottom: 8,
   },
-  actionText: {
-    color: '#fff',
-    fontWeight: '700',
+  actionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  languageText: {
+  actionIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  languageIconWrap: {
+    backgroundColor: '#edf7f0',
+  },
+  deleteIconWrap: {
+    backgroundColor: '#fdecec',
+  },
+  logoutIconWrap: {
+    backgroundColor: '#edf7f0',
+  },
+  actionLabelWrap: {
+    flex: 1,
+  },
+  actionLabel: {
     color: theme.colors.text,
     fontWeight: '700',
+    fontSize: 14,
+  },
+  actionDescription: {
+    color: theme.colors.textLight,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  languageText: {
+    color: theme.colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
+    marginTop: 2,
   },
   dashboardContainer: {
     marginTop: 10,

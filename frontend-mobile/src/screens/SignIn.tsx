@@ -16,7 +16,6 @@ import { theme } from '../styles/theme';
 import Button from '../components/Button';
 import FaceLoginButton from '../components/FaceLoginButton';
 import Input from '../components/Input';
-import InlineLinkText from '../components/InlineLinkText';
 import BackButton from '../components/BackButton';
 import ScreenLayout from '../components/ScreenLayout';
 import { authService } from '../services/api';
@@ -172,6 +171,14 @@ const SignIn = ({ navigation }: any) => {
                 }
               />
 
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ForgotPassword')}
+                style={styles.forgotPasswordButton}
+                accessibilityRole="button"
+              >
+                <Text style={styles.forgotPasswordText}>{t('login.forgotPassword')}</Text>
+              </TouchableOpacity>
+
               <Button
                 title={loading ? t('login.loggingIn') : t('common.login')}
                 onPress={handleLogin}
@@ -191,14 +198,6 @@ const SignIn = ({ navigation }: any) => {
                 onPress={() => navigation.navigate('SignUp')}
                 variant="secondary"
               />
-
-              <View style={styles.forgotPasswordContainer}>
-                <InlineLinkText
-                  text={t('login.forgotPassword')}
-                  linkText={t('login.clickHere')}
-                  onPressLink={() => navigation.navigate('ForgotPassword')}
-                />
-              </View>
           </ScrollView>
       </KeyboardAvoidingView>
       <ErrorOverlay message={errorMessage} title={t('login.failedTitle')} onClose={() => setErrorMessage(null)} />
@@ -230,6 +229,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 30,
     paddingTop: 40,
+    paddingBottom: 32,
   },
   title: {
     fontSize: theme.fontSize.display,
@@ -238,9 +238,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 30,
   },
-  forgotPasswordContainer: {
-    marginTop: 20,
-    alignItems: 'center',
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    marginBottom: 10,
+    paddingVertical: 6,
+  },
+  forgotPasswordText: {
+    color: theme.colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
 

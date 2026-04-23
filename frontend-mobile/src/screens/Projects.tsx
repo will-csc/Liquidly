@@ -92,13 +92,12 @@ const Projects = () => {
       };
 
       if (editingItem?.id) {
-        const updated = await projectService.update(editingItem.id, payload);
-        setItems((current) => current.map((item) => (item.id === editingItem.id ? updated : item)));
+        await projectService.update(editingItem.id, payload);
       } else {
-        const created = await projectService.create(payload);
-        setItems((current) => [...current, created]);
+        await projectService.create(payload);
       }
 
+      await fetchItems();
       setModalVisible(false);
       setProjectName('');
       setEditingItem(null);
@@ -108,7 +107,13 @@ const Projects = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (item: Project) => {
+    if (typeof item.id !== 'number') {
+      setErrorMessage(t('projects.deleteFailed'));
+      await fetchItems();
+      return;
+    }
+
     Alert.alert(t('projects.deleteTitle'), t('projects.deleteConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
@@ -116,8 +121,8 @@ const Projects = () => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await projectService.delete(id);
-            setItems((current) => current.filter((item) => item.id !== id));
+            await projectService.delete(item.id);
+            await fetchItems();
           } catch (error) {
             console.error('Failed to delete project', error);
             setErrorMessage(getErrorMessage(error, t('projects.deleteFailed')));
@@ -134,10 +139,10 @@ const Projects = () => {
       </View>
 
       <View style={styles.cardActions}>
-        <TouchableOpacity onPress={() => handleOpenModal(item)} style={styles.actionButton}>
+        <TouchableOpacity onPress={() => handleOpenModal(item)} style={[styles.actionButton, styles.editActionButton]}>
           <Text style={styles.editText}>{t('common.edit')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => item.id && handleDelete(item.id)} style={styles.actionButton}>
+        <TouchableOpacity onPress={() => handleDelete(item)} style={[styles.actionButton, styles.deleteActionButton]}>
           <Text style={styles.deleteText}>{t('common.delete')}</Text>
         </TouchableOpacity>
       </View>
@@ -249,7 +254,19 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   actionButton: {
-    marginLeft: 15,
+    minWidth: 88,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  editActionButton: {
+    backgroundColor: '#edf7f0',
+  },
+  deleteActionButton: {
+    backgroundColor: '#fdecec',
   },
   editText: {
     color: theme.colors.primary,

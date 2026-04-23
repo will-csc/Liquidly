@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { 
+  Alert,
   View, 
   Text, 
   StyleSheet, 
@@ -98,7 +99,16 @@ const SignUp = ({ navigation }: any) => {
         companyName: company,
         faceImage: faceImage || undefined
       });
-      navigation.replace('SignIn');
+      Alert.alert(t('signup.successTitle'), t('signup.successBody'), [
+        {
+          text: t('common.ok'),
+          onPress: () =>
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'SignIn' }],
+            }),
+        },
+      ]);
     } catch (error: any) {
       console.error('Sign up failed:', error);
       setErrorMessage(getErrorMessage(error, t('signup.createFailed')));

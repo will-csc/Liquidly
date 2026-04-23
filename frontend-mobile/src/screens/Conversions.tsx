@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -22,8 +22,16 @@ import Card from '../components/Card';
 import ModalHeader from '../components/ModalHeader';
 import PillActionButton from '../components/PillActionButton';
 import ScreenHeader from '../components/ScreenHeader';
+import SelectField from '../components/SelectField';
+import SelectableListItem from '../components/SelectableListItem';
 
 const normalizeItemCode = (value: string) => value.trim().toLowerCase();
+
+interface BomSelectionItem {
+  label: string;
+  value: string;
+  unit: string;
+}
 
 const Conversions = () => {
   const { t } = useI18n();
@@ -33,6 +41,9 @@ const Conversions = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<Conversion | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectionModalVisible, setSelectionModalVisible] = useState(false);
+  const [bomSearch, setBomSearch] = useState('');
+  const [selectedBomOption, setSelectedBomOption] = useState<BomSelectionItem | null>(null);
 
   // Form State
   const [itemCode, setItemCode] = useState('');
@@ -41,9 +52,41 @@ const Conversions = () => {
   const [bomQuantity, setBomQuantity] = useState('');
   const [toUnit, setToUnit] = useState('');
 
-  const findBomUnit = (code: string) => {
-    const matchedBom = boms.find((bom) => normalizeItemCode(bom.itemCode) === normalizeItemCode(code));
-    return matchedBom?.umBom || '';
+  const bomOptions = useMemo(() => {
+    const uniqueOptions = new Map<string, BomSelectionItem>();
+
+    boms.forEach((bom) => {
+      const normalizedCode = normalizeItemCode(bom.itemCode);
+      if (!normalizedCode || uniqueOptions.has(normalizedCode)) {
+        return;
+      }
+
+      uniqueOptions.set(normalizedCode, {
+        value: bom.itemCode,
+        label: `${bom.itemCode} - ${bom.itemName}`,
+        unit: bom.umBom,
+      });
+    });
+
+    return Array.from(uniqueOptions.values()).sort((first, second) => first.label.localeCompare(second.label));
+  }, [boms]);
+
+  const filteredBomOptions = useMemo(() => {
+    const search = normalizeItemCode(bomSearch);
+    if (!search) {
+      return bomOptions;
+    }
+
+    return bomOptions.filter(
+      (option) =>
+        normalizeItemCode(option.label).includes(search) ||
+        normalizeItemCode(option.value).includes(search)
+    );
+  }, [bomOptions, bomSearch]);
+
+  const findBomOption = (code: string) => {
+    const normalizedCode = normalizeItemCode(code);
+    return bomOptions.find((option) => normalizeItemCode(option.value) === normalizedCode) || null;
   };
 
   const fetchData = async () => {
@@ -76,12 +119,20 @@ const Conversions = () => {
 
   const handleOpenModal = (item?: Conversion) => {
     if (item) {
+      const matchedBomOption = findBomOption(item.itemCode);
       setEditingItem(item);
       setItemCode(item.itemCode);
       setInvoiceQuantity(item.qntdInvoice?.toString() || '');
       setFromUnit(item.umInvoice);
       setBomQuantity(item.qntdBom?.toString() || '');
       setToUnit(item.umBom);
+      setSelectedBomOption(
+        matchedBomOption || {
+          value: item.itemCode,
+          label: item.itemCode,
+          unit: item.umBom,
+        }
+      );
     } else {
       setEditingItem(null);
       setItemCode('');
@@ -89,16 +140,17 @@ const Conversions = () => {
       setFromUnit('');
       setBomQuantity('');
       setToUnit('');
+      setSelectedBomOption(null);
     }
+    setBomSearch('');
     setModalVisible(true);
   };
 
-  const handleChangeItemCode = (value: string) => {
-    setItemCode(value);
-    const matchedUnit = findBomUnit(value);
-    if (matchedUnit) {
-      setToUnit(matchedUnit);
-    }
+  const handleSelectBom = (option: BomSelectionItem) => {
+    setSelectedBomOption(option);
+    setItemCode(option.value);
+    setToUnit(option.unit);
+    setSelectionModalVisible(false);
   };
 
   const handleSave = async () => {
@@ -107,8 +159,8 @@ const Conversions = () => {
       return;
     }
 
-    const bomUnit = findBomUnit(itemCode);
-    if (!bomUnit) {
+    const bomOption = findBomOption(itemCode);
+    if (!bomOption) {
       setErrorMessage(t('conversions.itemNotInBom'));
       return;
     }
@@ -116,21 +168,20 @@ const Conversions = () => {
     try {
       const user = userStorage.getUser();
       const conversionData: Conversion = {
-        itemCode,
+        itemCode: bomOption.value,
         qntdInvoice: parseFloat(invoiceQuantity),
         umInvoice: fromUnit,
         qntdBom: parseFloat(bomQuantity),
-        umBom: bomUnit,
+        umBom: bomOption.unit,
         company: user && user.companyId ? { id: user.companyId } : undefined,
       };
 
       if (editingItem && editingItem.id) {
-        const updated = await conversionService.update(editingItem.id, conversionData);
-        setItems((current) => current.map((item) => (item.id === editingItem.id ? updated : item)));
+        await conversionService.update(editingItem.id, conversionData);
       } else {
-        const created = await conversionService.create(conversionData);
-        setItems((current) => [...current, created]);
+        await conversionService.create(conversionData);
       }
+      await fetchData();
       setModalVisible(false);
     } catch (error) {
       console.error('Failed to save conversion', error);
@@ -138,7 +189,13 @@ const Conversions = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (item: Conversion) => {
+    if (typeof item.id !== 'number') {
+      setErrorMessage(t('conversions.deleteFailed'));
+      await fetchData();
+      return;
+    }
+
     Alert.alert(
       t('conversions.deleteTitle'),
       t('conversions.deleteConfirm'),
@@ -149,8 +206,8 @@ const Conversions = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await conversionService.delete(id);
-              setItems((current) => current.filter((item) => item.id !== id));
+              await conversionService.delete(item.id);
+              await fetchData();
             } catch (error) {
               console.error('Failed to delete', error);
               setErrorMessage(getErrorMessage(error, t('conversions.deleteFailed')));
@@ -181,10 +238,10 @@ const Conversions = () => {
         </Text>
       </View>
       <View style={styles.cardActions}>
-        <TouchableOpacity onPress={() => handleOpenModal(item)} style={styles.actionButton}>
+        <TouchableOpacity onPress={() => handleOpenModal(item)} style={[styles.actionButton, styles.editActionButton]}>
           <Text style={styles.editText}>{t('common.edit')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => item.id && handleDelete(item.id)} style={styles.actionButton}>
+        <TouchableOpacity onPress={() => handleDelete(item)} style={[styles.actionButton, styles.deleteActionButton]}>
           <Text style={styles.deleteText}>{t('common.delete')}</Text>
         </TouchableOpacity>
       </View>
@@ -226,7 +283,12 @@ const Conversions = () => {
             closeLabel={t('common.close')}
           />
           <View style={styles.form}>
-            <Input label={t('conversions.itemCode')} value={itemCode} onChangeText={handleChangeItemCode} />
+            <SelectField
+              label={t('conversions.itemCode')}
+              valueText={selectedBomOption?.label || itemCode || undefined}
+              placeholder={t('conversions.selectItem')}
+              onPress={() => setSelectionModalVisible(true)}
+            />
             <Input
               label={t('conversions.invoiceQuantity')}
               value={invoiceQuantity}
@@ -245,6 +307,40 @@ const Conversions = () => {
             <Button title={t('common.save')} onPress={handleSave} style={{ marginTop: 20 }} />
           </View>
         </SafeAreaView>
+      </Modal>
+      <Modal
+        visible={selectionModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectionModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.selectionContent}>
+            <ModalHeader title={t('conversions.selectItem')} onClose={() => setSelectionModalVisible(false)} />
+            <View style={styles.searchContainer}>
+              <Input
+                label={t('common.search')}
+                value={bomSearch}
+                onChangeText={setBomSearch}
+                placeholder={t('conversions.filterItems')}
+              />
+            </View>
+            <FlatList
+              data={filteredBomOptions}
+              keyExtractor={(item) => item.value}
+              contentContainerStyle={styles.modalList}
+              ItemSeparatorComponent={() => <View style={styles.modalSeparator} />}
+              ListEmptyComponent={<Text style={styles.emptyText}>{t('conversions.noBomItemsAvailable')}</Text>}
+              renderItem={({ item }) => (
+                <SelectableListItem
+                  label={item.label}
+                  selected={selectedBomOption?.value === item.value}
+                  onPress={() => handleSelectBom(item)}
+                />
+              )}
+            />
+          </View>
+        </View>
       </Modal>
       <ErrorOverlay message={errorMessage} title={t('common.error')} onClose={() => setErrorMessage(null)} />
     </SafeAreaView>
@@ -321,7 +417,19 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   actionButton: {
-    marginLeft: 15,
+    minWidth: 88,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  editActionButton: {
+    backgroundColor: '#edf7f0',
+  },
+  deleteActionButton: {
+    backgroundColor: '#fdecec',
   },
   editText: {
     color: theme.colors.primary,
@@ -337,6 +445,29 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  selectionContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+  },
+  modalList: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  modalSeparator: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
   },
 });
 
