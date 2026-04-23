@@ -1,0 +1,4 @@
+INSERT INTO projects (id, name, company_id)
+VALUES
+(8, 'Metro SP', 5)
+ON CONFLICT (id) DO NOTHING;

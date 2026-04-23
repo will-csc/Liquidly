@@ -1,0 +1,8 @@
+Ordem sugerida de execucao no PostgreSQL:
+1. 01_companies.txt
+2. 02_projects.txt
+3. 03_boms.txt
+4. 04_conversions.txt
+5. 05_invoices.txt
+6. 06_pos.txt
+7. 07_sequences.txt

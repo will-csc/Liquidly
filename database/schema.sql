@@ -92,7 +92,6 @@ CREATE TABLE invoices (
    ========================================================================== */
 CREATE TABLE pos (
     id SERIAL PRIMARY KEY,
-    po_number VARCHAR(100), -- Numero da PO, sem FK
     item_code VARCHAR(100) NOT NULL,
     po_value NUMERIC(15, 2) NOT NULL DEFAULT 0,
     qntd_po NUMERIC(15, 4) NOT NULL,
