@@ -198,73 +198,66 @@ const Dashboard = () => {
         <ScreenHeader
           title={t('dashboard.title')}
           subtitle={t('dashboard.subtitle')}
-          right={
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                onPress={() => setLanguageModalVisible(true)}
-                style={[styles.actionButton, styles.languageButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
-                disabled={isDeletingAccount}
-              >
-                <View style={styles.actionContent}>
-                  <View style={[styles.actionIconWrap, styles.languageIconWrap]}>
-                    <Ionicons name="language-outline" size={18} color={theme.colors.primary} />
-                  </View>
-                  <View style={styles.actionLabelWrap}>
-                    <Text style={styles.actionLabel}>{t('language.title')}</Text>
-                    <Text style={styles.languageText}>{currentLanguageLabel}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textLight} />
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  if (isDeletingAccount) return;
-                  const user = userStorage.getUser();
-                  if (!user?.id) {
-                    setErrorMessage(t('dashboard.userNotFound'));
-                    return;
-                  }
-                  setPendingDeleteUserId(user.id);
-                  setDeleteModalVisible(true);
-                }}
-                style={[styles.actionButton, styles.deleteButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
-                disabled={isDeletingAccount}
-              >
-                <View style={styles.actionContent}>
-                  <View style={[styles.actionIconWrap, styles.deleteIconWrap]}>
-                    <Ionicons name="trash-outline" size={18} color="#d92d20" />
-                  </View>
-                  <View style={styles.actionLabelWrap}>
-                    <Text style={styles.actionLabel}>{t('dashboard.deleteAccount')}</Text>
-                    <Text style={styles.actionDescription}>
-                      {isDeletingAccount ? t('dashboard.deleting') : t('dashboard.deleteConfirmTitle')}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={async () => {
-                  if (isDeletingAccount) return;
-                  await userStorage.clearUser();
-                  goToEntry();
-                }}
-                style={[styles.actionButton, styles.logoutButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
-                disabled={isDeletingAccount}
-              >
-                <View style={styles.actionContent}>
-                  <View style={[styles.actionIconWrap, styles.logoutIconWrap]}>
-                    <Ionicons name="log-out-outline" size={18} color={theme.colors.primary} />
-                  </View>
-                  <View style={styles.actionLabelWrap}>
-                    <Text style={styles.actionLabel}>{t('dashboard.logout')}</Text>
-                    <Text style={styles.actionDescription}>{t('dashboard.subtitle')}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </View>
-          }
+          style={styles.header}
         />
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => setLanguageModalVisible(true)}
+            style={[styles.actionButton, styles.languageButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+            disabled={isDeletingAccount}
+          >
+            <View style={styles.actionContent}>
+              <View style={[styles.actionIconWrap, styles.languageIconWrap]}>
+                <Ionicons name="language-outline" size={16} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.compactActionLabel}>{t('language.title')}</Text>
+            </View>
+            <Text style={styles.compactActionValue}>{currentLanguageLabel}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              if (isDeletingAccount) return;
+              const user = userStorage.getUser();
+              if (!user?.id) {
+                setErrorMessage(t('dashboard.userNotFound'));
+                return;
+              }
+              setPendingDeleteUserId(user.id);
+              setDeleteModalVisible(true);
+            }}
+            style={[styles.actionButton, styles.deleteButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+            disabled={isDeletingAccount}
+          >
+            <View style={styles.actionContent}>
+              <View style={[styles.actionIconWrap, styles.deleteIconWrap]}>
+                <Ionicons name="trash-outline" size={16} color="#d92d20" />
+              </View>
+              <Text style={styles.compactActionLabel}>{t('dashboard.deleteAccount')}</Text>
+            </View>
+            <Text style={styles.compactActionValue}>
+              {isDeletingAccount ? t('dashboard.deleting') : t('common.delete')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={async () => {
+              if (isDeletingAccount) return;
+              await userStorage.clearUser();
+              goToEntry();
+            }}
+            style={[styles.actionButton, styles.logoutButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+            disabled={isDeletingAccount}
+          >
+            <View style={styles.actionContent}>
+              <View style={[styles.actionIconWrap, styles.logoutIconWrap]}>
+                <Ionicons name="log-out-outline" size={16} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.compactActionLabel}>{t('dashboard.logout')}</Text>
+            </View>
+            <Text style={styles.compactActionValue}>{t('dashboard.logout')}</Text>
+          </TouchableOpacity>
+        </View>
 
         {loading ? (
           <View style={styles.loadingState}>
@@ -411,16 +404,22 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  header: {
+    marginBottom: 12,
+  },
   headerActions: {
     width: '100%',
-    marginTop: 16,
-    gap: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 14,
   },
   actionButton: {
-    width: '100%',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    flex: 1,
+    minHeight: 76,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     borderWidth: 1,
   },
   actionButtonDisabled: {
@@ -441,14 +440,15 @@ const styles = StyleSheet.create({
   actionContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   actionIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 6,
   },
   languageIconWrap: {
     backgroundColor: '#edf7f0',
@@ -459,18 +459,17 @@ const styles = StyleSheet.create({
   logoutIconWrap: {
     backgroundColor: '#edf7f0',
   },
-  actionLabelWrap: {
-    flex: 1,
-  },
-  actionLabel: {
+  compactActionLabel: {
     color: theme.colors.text,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 12,
+    textAlign: 'center',
   },
-  actionDescription: {
+  compactActionValue: {
     color: theme.colors.textLight,
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 6,
+    textAlign: 'center',
   },
   languageText: {
     color: theme.colors.primary,

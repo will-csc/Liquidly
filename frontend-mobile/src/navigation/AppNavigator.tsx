@@ -50,6 +50,24 @@ const MainTabs = () => {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
+        tabBarLabelPosition: 'below-icon',
+        tabBarStyle: {
+          height: 68,
+          paddingTop: 6,
+          paddingBottom: 8,
+        },
+        tabBarItemStyle: {
+          minWidth: 0,
+          paddingHorizontal: 2,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          lineHeight: 12,
+          marginTop: 2,
+        },
+        tabBarIconStyle: {
+          marginTop: 2,
+        },
       })}
     >
       <Tab.Screen
@@ -60,12 +78,12 @@ const MainTabs = () => {
       <Tab.Screen
         name="Projects"
         component={Projects}
-        options={{ title: t('nav.projects'), tabBarLabel: t('nav.projects') }}
+        options={{ title: t('nav.projects'), tabBarLabel: t('nav.projectsShort') }}
       />
       <Tab.Screen
         name="Conversions"
         component={Conversions}
-        options={{ title: t('nav.conversions'), tabBarLabel: t('nav.conversions') }}
+        options={{ title: t('nav.conversions'), tabBarLabel: t('nav.conversionsShort') }}
       />
       <Tab.Screen
         name="BOM"
@@ -75,7 +93,7 @@ const MainTabs = () => {
       <Tab.Screen
         name="Report"
         component={Report}
-        options={{ title: t('nav.report'), tabBarLabel: t('nav.report') }}
+        options={{ title: t('nav.report'), tabBarLabel: t('nav.reportShort') }}
       />
     </Tab.Navigator>
   );

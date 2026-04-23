@@ -199,6 +199,16 @@ public class LiquidationResultService {
         List<Invoice> invoices = invoiceRepository.findByCompanyIdAndProjectId(companyId, projectId);
         List<Po> pos = poRepository.findByCompanyId(companyId);
 
+        if (invoices.isEmpty()) {
+            throw new RuntimeException("Cannot run report without NFs for the selected project");
+        }
+        if (pos.isEmpty()) {
+            throw new RuntimeException("Cannot run report without POs for the company");
+        }
+        if (boms.isEmpty()) {
+            throw new RuntimeException("Cannot run report without BOM data for the selected project");
+        }
+
         // Initialize remaining quantities if missing.
         for (Bom b : boms) {
             if (isNullOrZero(b.getRemainingQntd())) b.setRemainingQntd(nz(b.getQntd()));

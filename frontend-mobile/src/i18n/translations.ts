@@ -90,9 +90,12 @@ export const translations: Record<Language, Translations> = {
 
     "nav.home": "Home",
     "nav.projects": "Projects",
+    "nav.projectsShort": "Projects",
     "nav.bom": "BOM",
     "nav.report": "Report",
+    "nav.reportShort": "Report",
     "nav.conversions": "Conversions",
+    "nav.conversionsShort": "Convert.",
 
     "projects.title": "Projects",
     "projects.subtitle": "Manage your registered projects",
@@ -287,9 +290,12 @@ export const translations: Record<Language, Translations> = {
 
     "nav.home": "Início",
     "nav.projects": "Projetos",
+    "nav.projectsShort": "Projetos",
     "nav.bom": "BOM",
     "nav.report": "Relatório",
+    "nav.reportShort": "Relat.",
     "nav.conversions": "Conversões",
+    "nav.conversionsShort": "Convers.",
 
     "projects.title": "Projetos",
     "projects.subtitle": "Gerencie os projetos cadastrados",
@@ -484,9 +490,12 @@ export const translations: Record<Language, Translations> = {
 
     "nav.home": "Inicio",
     "nav.projects": "Proyectos",
+    "nav.projectsShort": "Proyectos",
     "nav.bom": "BOM",
     "nav.report": "Reporte",
+    "nav.reportShort": "Reporte",
     "nav.conversions": "Conversiones",
+    "nav.conversionsShort": "Convers.",
 
     "projects.title": "Proyectos",
     "projects.subtitle": "Gestiona los proyectos registrados",

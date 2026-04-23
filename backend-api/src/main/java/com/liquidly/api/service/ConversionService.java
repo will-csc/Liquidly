@@ -1,6 +1,8 @@
 package com.liquidly.api.service;
 
+import com.liquidly.api.model.Bom;
 import com.liquidly.api.model.Conversion;
+import com.liquidly.api.repository.BomRepository;
 import com.liquidly.api.repository.ConversionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,8 +17,15 @@ public class ConversionService {
     @Autowired
     private ConversionRepository conversionRepository;
 
+    @Autowired
+    private BomRepository bomRepository;
+
     // Persist a conversion record.
     public Conversion createConversion(Conversion conversion) {
+        validateConversionAgainstBom(
+                conversion,
+                conversion != null && conversion.getCompany() != null ? conversion.getCompany().getId() : null
+        );
         return conversionRepository.save(conversion);
     }
 
@@ -27,6 +36,15 @@ public class ConversionService {
         if (conversion == null) {
             throw new RuntimeException("Conversion is required");
         }
+
+        Long companyId =
+                conversion.getCompany() != null && conversion.getCompany().getId() != null
+                        ? conversion.getCompany().getId()
+                        : existing.getCompany() != null
+                                ? existing.getCompany().getId()
+                                : null;
+
+        validateConversionAgainstBom(conversion, companyId);
 
         existing.setItemCode(conversion.getItemCode());
         existing.setQntdInvoice(conversion.getQntdInvoice() == null ? BigDecimal.ZERO : conversion.getQntdInvoice());
@@ -65,5 +83,25 @@ public class ConversionService {
     // Delete a conversion record by id.
     public void deleteConversion(Long id) {
         conversionRepository.deleteById(id);
+    }
+
+    private void validateConversionAgainstBom(Conversion conversion, Long companyId) {
+        if (conversion == null) {
+            throw new RuntimeException("Conversion is required");
+        }
+
+        String itemCode = conversion.getItemCode() == null ? "" : conversion.getItemCode().trim();
+        if (itemCode.isEmpty() || companyId == null) {
+            return;
+        }
+
+        boolean existsInBom = bomRepository.findByCompanyId(companyId).stream()
+                .map(Bom::getItemCode)
+                .filter(code -> code != null && !code.trim().isEmpty())
+                .anyMatch(code -> code.trim().equalsIgnoreCase(itemCode));
+
+        if (!existsInBom) {
+            throw new RuntimeException("This item_code does not exist in the company BOM");
+        }
     }
 }

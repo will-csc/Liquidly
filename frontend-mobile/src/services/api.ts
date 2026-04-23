@@ -15,12 +15,14 @@ import {
 import { userStorage } from './userStorage';
 
 // URL Configuration
-// In Android emulator, localhost must be accessed via 10.0.2.2
-// In iOS and Web, localhost is localhost or 127.0.0.1
-const PROD_URL = 'https://liquidly-backend.onrender.com';
-const LOCAL_URL = Platform.OS === 'android' 
-  ? 'http://10.0.2.2:8080' 
-  : 'http://localhost:8080';
+// Match the same primary backend URL strategy used by the web frontend.
+// Allow overrides via Expo public env vars while keeping the same defaults.
+const PROD_URL =
+  process.env.EXPO_PUBLIC_API_URL_PROD ||
+  'https://liquidly-backend.onrender.com';
+const LOCAL_URL =
+  process.env.EXPO_PUBLIC_API_URL_LOCAL ||
+  (Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080');
 
 let currentBaseUrl = PROD_URL;
 let isFallbackActive = false;
@@ -31,6 +33,13 @@ const IS_TEST = typeof process !== 'undefined' && process.env?.NODE_ENV === 'tes
 const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 const LOG_API = IS_DEV && !IS_TEST;
 const API_TIMEOUT_MS = IS_DEV ? 5000 : 20000;
+const NETWORK_ERROR_CODES = new Set(['ECONNABORTED', 'ERR_NETWORK']);
+
+const isNetworkFailure = (error: AxiosError) =>
+  NETWORK_ERROR_CODES.has(error.code || '') ||
+  error.message.includes('Network Error') ||
+  error.message.includes('timeout') ||
+  !error.response;
 
 if (LOG_API) console.log(`[Mobile API] Initializing with URL: ${currentBaseUrl}`);
 
@@ -184,9 +193,10 @@ api.interceptors.response.use(
     if (
       IS_DEV &&
       !isFallbackActive &&
+      currentBaseUrl === PROD_URL &&
       originalRequest &&
       !originalRequest._retry &&
-      (error.code === 'ECONNABORTED' || error.message.includes('Network Error') || !error.response)
+      isNetworkFailure(error)
     ) {
       console.warn(`[Mobile API Failover] Failed to connect to ${PROD_URL}. Attempting fallback to local server (Backup)...`);
       
