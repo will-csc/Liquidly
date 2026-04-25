@@ -176,13 +176,16 @@ const ConversionsTable = () => {
     >();
 
     for (const inv of invoices) {
+      const invItemCode = normalizeItemCode(inv.itemCode || "");
       const invUm = (inv.umInvoice || "").trim();
-      if (!invUm) continue;
+      if (!invItemCode || !invUm) continue;
       const invProjectKey = projectKey(inv.project?.id, inv.project?.name);
       const relevantBoms = bomsByProjectKey.get(invProjectKey);
       if (!relevantBoms || relevantBoms.length === 0) continue;
 
       for (const b of relevantBoms) {
+        if (invItemCode !== normalizeItemCode(b.itemCode)) continue;
+        if (normalizeUm(invUm) === normalizeUm(b.umBom)) continue;
         const key = `${normalizeItemCode(b.itemCode)}|${normalizeUm(invUm)}|${normalizeUm(b.umBom)}`;
         if (conversionsSet.has(key)) continue;
 
