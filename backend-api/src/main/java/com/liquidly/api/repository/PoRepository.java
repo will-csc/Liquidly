@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
@@ -13,6 +14,7 @@ import java.util.Set;
 public interface PoRepository extends JpaRepository<Po, Long> {
     List<Po> findByCompany(Company company);
     List<Po> findByCompanyId(Long companyId);
+    Optional<Po> findByIdAndCompanyId(Long id, Long companyId);
     List<Po> findByPoNumber(String poNumber);
     void deleteByCompanyId(Long companyId);
 }

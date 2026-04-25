@@ -14,39 +14,52 @@ public class InvoiceService {
     @Autowired
     private InvoiceRepository invoiceRepository;
 
+    @Autowired
+    private AuthenticatedUserService authenticatedUserService;
+
     // Persist an invoice record.
     public Invoice createInvoice(Invoice invoice) {
+        if (invoice == null) {
+            throw new RuntimeException("Invoice is required");
+        }
+        invoice.setCompany(authenticatedUserService.getRequiredCompany());
         return invoiceRepository.save(invoice);
     }
 
     // Return all invoices.
     public List<Invoice> getAllInvoices() {
-        return invoiceRepository.findAll();
+        return invoiceRepository.findByCompanyId(authenticatedUserService.getRequiredCompanyId());
     }
 
     // Return invoices filtered by company id.
     public List<Invoice> getInvoicesByCompanyId(Long companyId) {
-        return invoiceRepository.findByCompanyId(companyId);
+        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        return invoiceRepository.findByCompanyId(resolvedCompanyId);
     }
 
     // Return invoices filtered by project id.
     public List<Invoice> getInvoicesByProjectId(Long projectId) {
-        return invoiceRepository.findByProjectId(projectId);
+        return invoiceRepository.findByCompanyIdAndProjectId(authenticatedUserService.getRequiredCompanyId(), projectId);
     }
 
     // Return an invoice record by invoice number and company id.
     public Optional<Invoice> getInvoiceByNumberAndCompanyId(String invoiceNumber, Long companyId) {
-        return invoiceRepository.findByInvoiceNumberAndCompanyId(invoiceNumber, companyId);
+        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        return invoiceRepository.findByInvoiceNumberAndCompanyId(invoiceNumber, resolvedCompanyId);
     }
 
     // Return an invoice by id.
     public Invoice getInvoiceById(Long id) {
-        return invoiceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+        return getInvoiceByIdForCompany(id, authenticatedUserService.getRequiredCompanyId());
     }
 
     // Delete an invoice by id.
     public void deleteInvoice(Long id) {
-        invoiceRepository.deleteById(id);
+        invoiceRepository.delete(getInvoiceByIdForCompany(id, authenticatedUserService.getRequiredCompanyId()));
+    }
+
+    public Invoice getInvoiceByIdForCompany(Long id, Long companyId) {
+        return invoiceRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
     }
 }

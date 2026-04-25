@@ -47,11 +47,6 @@ const asNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const sameCompany = (recordCompanyId: number | undefined, companyId: number | null) => {
-  if (companyId == null) return true;
-  return recordCompanyId === companyId;
-};
-
 const KpiCard = ({ title, value, icon: Icon }: {
   title: string; value: string; icon: React.ElementType;
 }) => (
@@ -93,15 +88,18 @@ const HomeDashboard = () => {
           companyId ? bomService.getByCompany(companyId) : bomService.getAll()
         ]);
 
-        const invoices = invoiceResponse.filter((invoice) => sameCompany(invoice.company?.id, companyId));
-        const pos = poResponse.filter((po) => sameCompany(po.company?.id, companyId));
-        const boms = bomResponse.filter((bom) => sameCompany(bom.company?.id, companyId));
+        // When the backend endpoint is already company-scoped, trust the API payload directly.
+        const invoices = invoiceResponse;
+        const pos = poResponse;
+        const boms = bomResponse;
 
-        // Calculate Totals
-        const totalInvoices = invoices.reduce((sum, inv) => sum + asNumber(inv.qntdInvoice), 0);
-        const totalPos = pos.reduce((sum, po) => sum + asNumber(po.qntdInvoice), 0);
-        const totalBom = boms.reduce((sum, bom) => sum + asNumber(bom.qntd), 0);
-        const variance = totalBom > 0 ? ((totalInvoices - totalBom) / totalBom) * 100 : 0;
+        // KPI cards show how many records exist; variance stays quantity-based.
+        const totalInvoices = invoices.length;
+        const totalPos = pos.length;
+        const totalBom = boms.length;
+        const totalInvoiceQuantity = invoices.reduce((sum, inv) => sum + asNumber(inv.qntdInvoice), 0);
+        const totalBomQuantity = boms.reduce((sum, bom) => sum + asNumber(bom.qntd), 0);
+        const variance = totalBomQuantity > 0 ? ((totalInvoiceQuantity - totalBomQuantity) / totalBomQuantity) * 100 : 0;
 
         setStats({
           totalInvoices,
@@ -110,9 +108,9 @@ const HomeDashboard = () => {
           variance
         });
 
-        // Calculate Status (Settled vs Pending based on remaining quantity)
-        const settledInvoices = invoices.filter((i) => asNumber(i.remainingQntd) <= 0).length;
-        const pendingInvoices = invoices.length - settledInvoices;
+        // Status chart is based on BOM remaining quantity.
+        const settledInvoices = boms.filter((bom) => asNumber(bom.remainingQntd) <= 0).length;
+        const pendingInvoices = boms.filter((bom) => asNumber(bom.remainingQntd) > 0).length;
         setInvoiceStatus({ settled: settledInvoices, pending: pendingInvoices });
 
         // Calculate Monthly Data
@@ -176,7 +174,7 @@ const HomeDashboard = () => {
           }));
 
         if (chartData.length === 0) {
-          chartData.push({ month: "__current__", invoices: totalInvoices, pos: totalPos, bom: totalBom });
+          chartData.push({ month: "__current__", invoices: totalInvoiceQuantity, pos: pos.reduce((sum, po) => sum + asNumber(po.qntdInvoice), 0), bom: totalBomQuantity });
         }
 
         setMonthlyData(chartData);
