@@ -20,29 +20,25 @@ public class ConversionService {
     @Autowired
     private BomRepository bomRepository;
 
+    @Autowired
+    private AuthenticatedUserService authenticatedUserService;
+
     // Persist a conversion record.
     public Conversion createConversion(Conversion conversion) {
-        validateConversionAgainstBom(
-                conversion,
-                conversion != null && conversion.getCompany() != null ? conversion.getCompany().getId() : null
-        );
+        Long companyId = authenticatedUserService.getRequiredCompanyId();
+        validateConversionAgainstBom(conversion, companyId);
+        conversion.setCompany(authenticatedUserService.getRequiredCompany());
         return conversionRepository.save(conversion);
     }
 
     // Update an existing conversion entry while preserving company when omitted.
     public Conversion updateConversion(Long id, Conversion conversion) {
-        Conversion existing = getConversionById(id);
+        Long companyId = authenticatedUserService.getRequiredCompanyId();
+        Conversion existing = getConversionByIdForCompany(id, companyId);
 
         if (conversion == null) {
             throw new RuntimeException("Conversion is required");
         }
-
-        Long companyId =
-                conversion.getCompany() != null && conversion.getCompany().getId() != null
-                        ? conversion.getCompany().getId()
-                        : existing.getCompany() != null
-                                ? existing.getCompany().getId()
-                                : null;
 
         validateConversionAgainstBom(conversion, companyId);
 
@@ -52,37 +48,36 @@ public class ConversionService {
         existing.setQntdBom(conversion.getQntdBom() == null ? BigDecimal.ZERO : conversion.getQntdBom());
         existing.setUmBom(conversion.getUmBom());
 
-        if (conversion.getCompany() != null && conversion.getCompany().getId() != null) {
-            existing.setCompany(conversion.getCompany());
-        }
+        existing.setCompany(authenticatedUserService.getRequiredCompany());
 
         return conversionRepository.save(existing);
     }
 
     // Return all conversion records.
     public List<Conversion> getAllConversions() {
-        return conversionRepository.findAll();
+        return conversionRepository.findByCompanyId(authenticatedUserService.getRequiredCompanyId());
     }
 
     // Return conversion records filtered by company id.
     public List<Conversion> getConversionsByCompanyId(Long companyId) {
-        return conversionRepository.findByCompanyId(companyId);
+        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        return conversionRepository.findByCompanyId(resolvedCompanyId);
     }
 
     // Return a conversion record by item code and company id.
     public Optional<Conversion> getConversionByItemCodeAndCompanyId(String itemCode, Long companyId) {
-        return conversionRepository.findByItemCodeAndCompanyId(itemCode, companyId);
+        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        return conversionRepository.findByItemCodeAndCompanyId(itemCode, resolvedCompanyId);
     }
 
     // Return a conversion record by id.
     public Conversion getConversionById(Long id) {
-        return conversionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Conversion not found with id: " + id));
+        return getConversionByIdForCompany(id, authenticatedUserService.getRequiredCompanyId());
     }
 
     // Delete a conversion record by id.
     public void deleteConversion(Long id) {
-        conversionRepository.deleteById(id);
+        conversionRepository.delete(getConversionByIdForCompany(id, authenticatedUserService.getRequiredCompanyId()));
     }
 
     private void validateConversionAgainstBom(Conversion conversion, Long companyId) {
@@ -103,5 +98,10 @@ public class ConversionService {
         if (!existsInBom) {
             throw new RuntimeException("This item_code does not exist in the company BOM");
         }
+    }
+
+    public Conversion getConversionByIdForCompany(Long id, Long companyId) {
+        return conversionRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new RuntimeException("Conversion not found with id: " + id));
     }
 }

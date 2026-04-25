@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface ConversionRepository extends JpaRepository<Conversion, Long> {
     List<Conversion> findByCompany(Company company);
     List<Conversion> findByCompanyId(Long companyId);
+    Optional<Conversion> findByIdAndCompanyId(Long id, Long companyId);
     Optional<Conversion> findByItemCodeAndCompany(String itemCode, Company company);
     Optional<Conversion> findByItemCodeAndCompanyId(String itemCode, Long companyId);
     Optional<Conversion> findTopByCompanyIdAndItemCodeIgnoreCaseAndUmInvoiceIgnoreCaseAndUmBomIgnoreCaseOrderByIdDesc(

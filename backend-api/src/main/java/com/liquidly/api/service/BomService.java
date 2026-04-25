@@ -14,8 +14,15 @@ public class BomService {
     @Autowired
     private BomRepository bomRepository;
 
+    @Autowired
+    private AuthenticatedUserService authenticatedUserService;
+
     // Persist a BOM entry, applying defaults for quantities and project name when missing.
     public Bom createBom(Bom bom) {
+        if (bom == null) {
+            throw new RuntimeException("BOM is required");
+        }
+
         // Default missing quantities to zero / initial values.
         if (bom.getQntd() == null) {
             bom.setQntd(BigDecimal.ZERO);
@@ -36,12 +43,14 @@ public class BomService {
             bom.setProjectName(derived);
         }
 
+        bom.setCompany(authenticatedUserService.getRequiredCompany());
         return bomRepository.save(bom);
     }
 
     // Update an existing BOM entry while preserving immutable metadata when omitted.
     public Bom updateBom(Long id, Bom bom) {
-        Bom existing = getBomById(id);
+        Long companyId = authenticatedUserService.getRequiredCompanyId();
+        Bom existing = getBomByIdForCompany(id, companyId);
 
         if (bom == null) {
             throw new RuntimeException("BOM is required");
@@ -62,36 +71,39 @@ public class BomService {
         existing.setQntd(bom.getQntd() == null ? BigDecimal.ZERO : bom.getQntd());
         existing.setRemainingQntd(bom.getRemainingQntd() == null ? existing.getQntd() : bom.getRemainingQntd());
 
-        if (bom.getCompany() != null && bom.getCompany().getId() != null) {
-            existing.setCompany(bom.getCompany());
-        }
+        existing.setCompany(authenticatedUserService.getRequiredCompany());
 
         return bomRepository.save(existing);
     }
 
     // Return all BOM entries.
     public List<Bom> getAllBoms() {
-        return bomRepository.findAll();
+        return bomRepository.findByCompanyId(authenticatedUserService.getRequiredCompanyId());
     }
 
     // Return BOM entries filtered by company id.
     public List<Bom> getBomsByCompanyId(Long companyId) {
-        return bomRepository.findByCompanyId(companyId);
+        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        return bomRepository.findByCompanyId(resolvedCompanyId);
     }
 
     // Return BOM entries filtered by project id.
     public List<Bom> getBomsByProjectId(Long projectId) {
-        return bomRepository.findByProjectId(projectId);
+        return bomRepository.findByProjectIdAndCompanyId(projectId, authenticatedUserService.getRequiredCompanyId());
     }
 
     // Return a BOM entry by id.
     public Bom getBomById(Long id) {
-        return bomRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("BOM not found with id: " + id));
+        return getBomByIdForCompany(id, authenticatedUserService.getRequiredCompanyId());
     }
 
     // Delete a BOM entry by id.
     public void deleteBom(Long id) {
-        bomRepository.deleteById(id);
+        bomRepository.delete(getBomByIdForCompany(id, authenticatedUserService.getRequiredCompanyId()));
+    }
+
+    public Bom getBomByIdForCompany(Long id, Long companyId) {
+        return bomRepository.findByIdAndCompanyId(id, companyId)
+                .orElseThrow(() -> new RuntimeException("BOM not found with id: " + id));
     }
 }
