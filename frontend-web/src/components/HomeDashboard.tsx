@@ -17,6 +17,41 @@ type MonthlyChartDatum = {
   bom: number;
 };
 
+type DashboardUser = {
+  companyId?: number | null;
+  companyName?: string | null;
+};
+
+const readStoredUser = (): DashboardUser | null => {
+  const storages = [localStorage, sessionStorage];
+
+  for (const storage of storages) {
+    try {
+      const rawUser = storage.getItem("user");
+      if (!rawUser) continue;
+
+      const parsed = JSON.parse(rawUser) as DashboardUser | null;
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+};
+
+const asNumber = (value: unknown): number => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sameCompany = (recordCompanyId: number | undefined, companyId: number | null) => {
+  if (companyId == null) return true;
+  return recordCompanyId === companyId;
+};
+
 const KpiCard = ({ title, value, icon: Icon }: {
   title: string; value: string; icon: React.ElementType;
 }) => (
@@ -49,20 +84,23 @@ const HomeDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const userStr = localStorage.getItem('user');
-        const user = userStr ? JSON.parse(userStr) : null;
-        const companyId = user?.companyId;
+        const user = readStoredUser();
+        const companyId = user?.companyId ?? null;
 
-        const [invoices, pos, boms] = await Promise.all([
+        const [invoiceResponse, poResponse, bomResponse] = await Promise.all([
           companyId ? invoiceService.getByCompany(companyId) : invoiceService.getAll(),
           companyId ? poService.getByCompany(companyId) : poService.getAll(),
           companyId ? bomService.getByCompany(companyId) : bomService.getAll()
         ]);
 
+        const invoices = invoiceResponse.filter((invoice) => sameCompany(invoice.company?.id, companyId));
+        const pos = poResponse.filter((po) => sameCompany(po.company?.id, companyId));
+        const boms = bomResponse.filter((bom) => sameCompany(bom.company?.id, companyId));
+
         // Calculate Totals
-        const totalInvoices = invoices.reduce((sum, inv) => sum + inv.qntdInvoice, 0);
-        const totalPos = pos.reduce((sum, po) => sum + po.qntdInvoice, 0);
-        const totalBom = boms.reduce((sum, bom) => sum + bom.qntd, 0);
+        const totalInvoices = invoices.reduce((sum, inv) => sum + asNumber(inv.qntdInvoice), 0);
+        const totalPos = pos.reduce((sum, po) => sum + asNumber(po.qntdInvoice), 0);
+        const totalBom = boms.reduce((sum, bom) => sum + asNumber(bom.qntd), 0);
         const variance = totalBom > 0 ? ((totalInvoices - totalBom) / totalBom) * 100 : 0;
 
         setStats({
@@ -73,49 +111,72 @@ const HomeDashboard = () => {
         });
 
         // Calculate Status (Settled vs Pending based on remaining quantity)
-        // Assuming settled means remainingQntd is 0 or low
-        const settledInvoices = invoices.filter(i => i.remainingQntd <= 0).length;
+        const settledInvoices = invoices.filter((i) => asNumber(i.remainingQntd) <= 0).length;
         const pendingInvoices = invoices.length - settledInvoices;
         setInvoiceStatus({ settled: settledInvoices, pending: pendingInvoices });
 
         // Calculate Monthly Data
-        // Group by month. Since we might not have dates for everything or they might be all new, 
-        // we'll try to use createdAt. If missing, we'll dump in "Current".
-        const months: Record<string, { invoices: number; pos: number; bom: number }> = {};
-        
-        const processDate = (dateStr: string | undefined) => {
-           if (!dateStr) return "__current__";
-           const date = new Date(dateStr);
-           return date.toLocaleString(locale, { month: "short" });
+        const months: Record<string, { invoices: number; pos: number; bom: number; sortOrder: number }> = {};
+
+        const resolveMonthKey = (...dateCandidates: Array<string | undefined>) => {
+          for (const dateCandidate of dateCandidates) {
+            if (!dateCandidate) continue;
+
+            const date = new Date(dateCandidate);
+            if (Number.isNaN(date.getTime())) continue;
+
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+            const month = date.toLocaleString(locale, { month: "short", year: "2-digit" });
+
+            return {
+              key,
+              month,
+              sortOrder: new Date(date.getFullYear(), date.getMonth(), 1).getTime(),
+            };
+          }
+
+          return {
+            key: "__current__",
+            month: "__current__",
+            sortOrder: Number.MAX_SAFE_INTEGER,
+          };
         };
 
         invoices.forEach(i => {
-          const month = processDate(i.createdAt);
-          if (!months[month]) months[month] = { invoices: 0, pos: 0, bom: 0 };
-          months[month].invoices += i.qntdInvoice;
+          const monthMeta = resolveMonthKey(i.invoiceDateString, i.createdAt);
+          if (!months[monthMeta.key]) {
+            months[monthMeta.key] = { invoices: 0, pos: 0, bom: 0, sortOrder: monthMeta.sortOrder };
+          }
+          months[monthMeta.key].invoices += asNumber(i.qntdInvoice);
         });
 
         pos.forEach(p => {
-          const month = processDate(p.createdAt);
-          if (!months[month]) months[month] = { invoices: 0, pos: 0, bom: 0 };
-          months[month].pos += p.qntdInvoice;
+          const monthMeta = resolveMonthKey(p.createdAt);
+          if (!months[monthMeta.key]) {
+            months[monthMeta.key] = { invoices: 0, pos: 0, bom: 0, sortOrder: monthMeta.sortOrder };
+          }
+          months[monthMeta.key].pos += asNumber(p.qntdInvoice);
         });
 
-        // BOM usually doesn't have a date like invoice, but let's assume it's constant or distributed.
-        // For chart purposes, we can just show BOM total in "Current" or distribute it.
-        // Let's just put it in current month if we have data, or spread it.
-        // Actually, without dates on BOM, we can't trend it easily. 
-        // We'll just show BOM as a reference line or bar in the months where we have activity.
-        
-        // Convert to array
-        const chartData: MonthlyChartDatum[] = Object.entries(months).map(([month, data]) => ({
-          month,
-          ...data
-        }));
-        
-        // If empty (no dates), create a dummy "Current"
+        boms.forEach((bom) => {
+          const monthMeta = resolveMonthKey(bom.createdAt);
+          if (!months[monthMeta.key]) {
+            months[monthMeta.key] = { invoices: 0, pos: 0, bom: 0, sortOrder: monthMeta.sortOrder };
+          }
+          months[monthMeta.key].bom += asNumber(bom.qntd);
+        });
+
+        const chartData: MonthlyChartDatum[] = Object.entries(months)
+          .sort(([, a], [, b]) => a.sortOrder - b.sortOrder)
+          .map(([monthKey, data]) => ({
+            month: monthKey === "__current__" ? "__current__" : new Date(`${monthKey}-01`).toLocaleString(locale, { month: "short", year: "2-digit" }),
+            invoices: data.invoices,
+            pos: data.pos,
+            bom: data.bom,
+          }));
+
         if (chartData.length === 0) {
-            chartData.push({ month: "__current__", invoices: totalInvoices, pos: totalPos, bom: totalBom });
+          chartData.push({ month: "__current__", invoices: totalInvoices, pos: totalPos, bom: totalBom });
         }
 
         setMonthlyData(chartData);
