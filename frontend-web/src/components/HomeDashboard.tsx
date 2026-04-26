@@ -1,7 +1,7 @@
 import { DollarSign, FileText, ShoppingCart, ClipboardList } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { useEffect, useState } from "react";
-import { invoiceService, poService, bomService } from "@/services/api";
+import { invoiceService, poService, bomService, getCurrentBaseUrl } from "@/services/api";
 import { useI18n } from "@/i18n/i18n";
 
 const localeFromLanguage = (language: string) => {
@@ -67,6 +67,7 @@ const HomeDashboard = () => {
   const formatNumber = (value: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
 
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalInvoices: 0,
     totalPos: 0,
@@ -77,29 +78,55 @@ const HomeDashboard = () => {
   const [invoiceStatus, setInvoiceStatus] = useState({ settled: 0, pending: 0 });
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
+        setErrorMessage(null);
         const user = readStoredUser();
         const companyId = user?.companyId ?? null;
 
-        const [invoiceResponse, poResponse, bomResponse] = await Promise.all([
+        const results = await Promise.allSettled([
           companyId ? invoiceService.getByCompany(companyId) : invoiceService.getAll(),
           companyId ? poService.getByCompany(companyId) : poService.getAll(),
           companyId ? bomService.getByCompany(companyId) : bomService.getAll()
         ]);
 
-        // When the backend endpoint is already company-scoped, trust the API payload directly.
-        const invoices = invoiceResponse;
-        const pos = poResponse;
-        const boms = bomResponse;
+        const [invoiceResult, poResult, bomResult] = results;
+        const invoices = invoiceResult.status === "fulfilled" ? invoiceResult.value : [];
+        const pos = poResult.status === "fulfilled" ? poResult.value : [];
+        const boms = bomResult.status === "fulfilled" ? bomResult.value : [];
+        const failedSources = [
+          invoiceResult.status === "rejected" ? "faturas" : null,
+          poResult.status === "rejected" ? "POs" : null,
+          bomResult.status === "rejected" ? "BOM" : null,
+        ].filter(Boolean) as string[];
 
-        // KPI cards show how many records exist; variance stays quantity-based.
-        const totalInvoices = invoices.length;
-        const totalPos = pos.length;
-        const totalBom = boms.length;
+        console.log("[Dashboard] API fetch summary", {
+          baseUrl: getCurrentBaseUrl(),
+          companyId,
+          invoices: invoices.length,
+          pos: pos.length,
+          boms: boms.length,
+          failedSources,
+        });
+
+        if (failedSources.length === 3) {
+          throw new Error(`Nao foi possivel carregar dados do dashboard a partir de ${getCurrentBaseUrl()}.`);
+        }
+
+        if (!cancelled && failedSources.length > 0) {
+          setErrorMessage(`Falha ao carregar: ${failedSources.join(", ")}.`);
+        }
+
+        const totalInvoices = invoices.reduce((sum, inv) => sum + asNumber(inv.qntdInvoice), 0);
+        const totalPos = pos.reduce((sum, po) => sum + asNumber(po.qntdInvoice), 0);
+        const totalBom = boms.reduce((sum, bom) => sum + asNumber(bom.qntd), 0);
         const totalInvoiceQuantity = invoices.reduce((sum, inv) => sum + asNumber(inv.qntdInvoice), 0);
         const totalBomQuantity = boms.reduce((sum, bom) => sum + asNumber(bom.qntd), 0);
         const variance = totalBomQuantity > 0 ? ((totalInvoiceQuantity - totalBomQuantity) / totalBomQuantity) * 100 : 0;
+
+        if (cancelled) return;
 
         setStats({
           totalInvoices,
@@ -108,9 +135,8 @@ const HomeDashboard = () => {
           variance
         });
 
-        // Status chart is based on BOM remaining quantity.
-        const settledInvoices = boms.filter((bom) => asNumber(bom.remainingQntd) <= 0).length;
-        const pendingInvoices = boms.filter((bom) => asNumber(bom.remainingQntd) > 0).length;
+        const settledInvoices = invoices.filter((invoice) => asNumber(invoice.remainingQntd) <= 0).length;
+        const pendingInvoices = invoices.filter((invoice) => asNumber(invoice.remainingQntd) > 0).length;
         setInvoiceStatus({ settled: settledInvoices, pending: pendingInvoices });
 
         // Calculate Monthly Data
@@ -181,12 +207,20 @@ const HomeDashboard = () => {
 
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
+        if (!cancelled) {
+          setErrorMessage(`Nao foi possivel carregar os dados do dashboard. API atual: ${getCurrentBaseUrl()}.`);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [locale]);
 
   if (loading) {
@@ -204,6 +238,11 @@ const HomeDashboard = () => {
         <h1 className="text-xl font-display font-bold text-foreground">{t("dashboard.title")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">{t("dashboard.subtitle")}</p>
       </div>
+      {errorMessage && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {errorMessage}
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

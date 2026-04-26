@@ -42,6 +42,7 @@ const ConversionsTable = () => {
   const [editDraft, setEditDraft] = useState<ConversionRow | null>(null);
   const [adding, setAdding] = useState(false);
   const [newItem, setNewItem] = useState<ConversionRow>(emptyConversion());
+  const [showAllItems, setShowAllItems] = useState(false);
   const [importing, setImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<ConversionRow | null>(null);
@@ -512,6 +513,8 @@ const ConversionsTable = () => {
     );
   };
 
+  const visibleItems = showAllItems ? items : items.slice(0, 20);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -608,7 +611,7 @@ const ConversionsTable = () => {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => renderRow(item))}
+              {visibleItems.map((item) => renderRow(item))}
               {adding && (
                 <tr className="bg-primary/5 border-b border-border/50 animate-in fade-in">
                   <td className="py-2 px-2">
@@ -651,6 +654,23 @@ const ConversionsTable = () => {
            )}
            {loading && (
               <div className="p-8 text-center text-muted-foreground">{t("common.loading")}</div>
+           )}
+           {items.length > 20 && !loading && (
+              <div className="flex items-center justify-between gap-3 border-t border-border/50 p-3">
+                <div className="text-xs text-muted-foreground">
+                  {showAllItems
+                    ? `${items.length} itens exibidos`
+                    : `${visibleItems.length} de ${items.length} itens exibidos`}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllItems((current) => !current)}
+                >
+                  {showAllItems ? "Mostrar menos" : "Mostrar todos"}
+                </Button>
+              </div>
            )}
         </div>
       </div>

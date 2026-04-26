@@ -17,7 +17,9 @@ import type {
 // URL Configuration
 const IS_PROD_BUILD = import.meta.env.MODE === 'production';
 const PROD_URL = import.meta.env.VITE_API_URL_PROD || 'https://liquidly-backend.onrender.com';
-const LOCAL_URL = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080';
+const LOCAL_URL = (import.meta.env.VITE_API_URL_LOCAL || '').trim();
+const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS || 15000);
+const canUseLocalFallback = !IS_PROD_BUILD && LOCAL_URL.length > 0;
 
 // Determine initial URL based on environment
 // Always try PROD first, fallback to LOCAL only if PROD is unreachable.
@@ -82,7 +84,7 @@ const logApiError = (label: string, error: AxiosError) => {
 // Create Axios Instance
 const api: AxiosInstance = axios.create({
   baseURL: currentBaseUrl,
-  timeout: 5000, // 5s timeout to fail fast and try local backup
+  timeout: Number.isFinite(API_TIMEOUT_MS) && API_TIMEOUT_MS > 0 ? API_TIMEOUT_MS : 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -139,7 +141,7 @@ api.interceptors.response.use(
     // Check if it's a network/connection error and retry hasn't been attempted yet
     // Only attempt failover if we are currently using PROD_URL
     if (
-      !IS_PROD_BUILD &&
+      canUseLocalFallback &&
       !isFallbackActive &&
       currentBaseUrl === PROD_URL &&
       originalRequest &&
