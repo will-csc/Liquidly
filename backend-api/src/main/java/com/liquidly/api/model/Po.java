@@ -31,7 +31,7 @@ public class Po {
     @Column(name = "po_value", nullable = false, precision = 15, scale = 2)
     private BigDecimal poValue;
 
-    @Column(name = "qntd_invoice", nullable = false, precision = 15, scale = 4)
+    @Column(name = "qntd_po", nullable = false, precision = 15, scale = 4)
     private BigDecimal qntdInvoice;
 
     @Column(name = "um_po", nullable = false)

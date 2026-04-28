@@ -62,7 +62,9 @@ const Dashboard = () => {
     const totalInvoices = invoices.reduce((sum, inv) => sum + inv.qntdInvoice, 0);
     const totalPos = pos.reduce((sum, po) => sum + po.qntdInvoice, 0);
     const totalBom = boms.reduce((sum, bom) => sum + bom.qntd, 0);
-    const variance = totalBom > 0 ? ((totalInvoices - totalBom) / totalBom) * 100 : 0;
+    const totalInvoiceValue = invoices.reduce((sum, inv) => sum + (inv.invoiceValue ?? 0), 0);
+    const totalPoValue = pos.reduce((sum, po) => sum + (po.poValue ?? 0), 0);
+    const variance = totalPoValue > 0 ? ((totalInvoiceValue - totalPoValue) / totalPoValue) * 100 : 0;
 
     setStats({
       totalInvoices,

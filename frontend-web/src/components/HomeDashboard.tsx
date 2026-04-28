@@ -124,7 +124,9 @@ const HomeDashboard = () => {
         const totalBom = boms.reduce((sum, bom) => sum + asNumber(bom.qntd), 0);
         const totalInvoiceQuantity = invoices.reduce((sum, inv) => sum + asNumber(inv.qntdInvoice), 0);
         const totalBomQuantity = boms.reduce((sum, bom) => sum + asNumber(bom.qntd), 0);
-        const variance = totalBomQuantity > 0 ? ((totalInvoiceQuantity - totalBomQuantity) / totalBomQuantity) * 100 : 0;
+        const totalInvoiceValue = invoices.reduce((sum, inv) => sum + asNumber(inv.invoiceValue), 0);
+        const totalPoValue = pos.reduce((sum, po) => sum + asNumber(po.poValue), 0);
+        const variance = totalPoValue > 0 ? ((totalInvoiceValue - totalPoValue) / totalPoValue) * 100 : 0;
 
         if (cancelled) return;
 
