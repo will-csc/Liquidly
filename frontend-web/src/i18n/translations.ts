@@ -101,6 +101,7 @@ export const translations: Record<Language, Translations> = {
     "dashboard.status.settled": "Settled",
     "dashboard.status.pending": "Pending",
     "dashboard.tooltip.invoicesCount": "{count} invoices",
+    "dashboard.tooltip.invoiceStatusPercent": "{percent}% ({count} invoices)",
     "dashboard.month.current": "Current",
 
     "report.title": "Reports",
@@ -219,6 +220,7 @@ export const translations: Record<Language, Translations> = {
     "dashboard.status.settled": "Quitado",
     "dashboard.status.pending": "Pendente",
     "dashboard.tooltip.invoicesCount": "{count} faturas",
+    "dashboard.tooltip.invoiceStatusPercent": "{percent}% ({count} faturas)",
     "dashboard.month.current": "Atual",
 
     "report.title": "Relatórios",
@@ -337,6 +339,7 @@ export const translations: Record<Language, Translations> = {
     "dashboard.status.settled": "Pagado",
     "dashboard.status.pending": "Pendiente",
     "dashboard.tooltip.invoicesCount": "{count} facturas",
+    "dashboard.tooltip.invoiceStatusPercent": "{percent}% ({count} facturas)",
     "dashboard.month.current": "Actual",
 
     "report.title": "Reportes",

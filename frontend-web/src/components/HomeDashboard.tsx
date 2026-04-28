@@ -137,7 +137,7 @@ const HomeDashboard = () => {
           variance
         });
 
-        const settledInvoices = invoices.filter((invoice) => asNumber(invoice.remainingQntd) <= 0).length;
+        const settledInvoices = invoices.filter((invoice) => asNumber(invoice.remainingQntd) === 0).length;
         const pendingInvoices = invoices.filter((invoice) => asNumber(invoice.remainingQntd) > 0).length;
         setInvoiceStatus({ settled: settledInvoices, pending: pendingInvoices });
 
@@ -229,9 +229,20 @@ const HomeDashboard = () => {
     return <div className="p-8 text-center text-muted-foreground">{t("dashboard.loading")}</div>;
   }
 
+  const totalClassifiedInvoices = invoiceStatus.settled + invoiceStatus.pending;
   const statusData = [
-    { name: t("dashboard.status.settled"), value: invoiceStatus.settled, color: "hsl(145, 63%, 32%)" },
-    { name: t("dashboard.status.pending"), value: invoiceStatus.pending, color: "hsl(40, 90%, 50%)" },
+    {
+      name: t("dashboard.status.settled"),
+      value: totalClassifiedInvoices > 0 ? (invoiceStatus.settled / totalClassifiedInvoices) * 100 : 0,
+      count: invoiceStatus.settled,
+      color: "hsl(145, 63%, 32%)",
+    },
+    {
+      name: t("dashboard.status.pending"),
+      value: totalClassifiedInvoices > 0 ? (invoiceStatus.pending / totalClassifiedInvoices) * 100 : 0,
+      count: invoiceStatus.pending,
+      color: "hsl(40, 90%, 50%)",
+    },
   ];
 
   return (
@@ -288,8 +299,13 @@ const HomeDashboard = () => {
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number | undefined) =>
-                  value !== undefined ? t("dashboard.tooltip.invoicesCount", { count: value }) : ""
+                formatter={(value: number | undefined, _name, item) =>
+                  value !== undefined
+                    ? t("dashboard.tooltip.invoiceStatusPercent", {
+                        percent: value.toFixed(1),
+                        count: typeof item?.payload?.count === "number" ? item.payload.count : 0,
+                      })
+                    : ""
                 }
               />
             </PieChart>
@@ -298,7 +314,7 @@ const HomeDashboard = () => {
              {statusData.map((entry, i) => (
                 <div key={i} className="flex items-center gap-1">
                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                   <span className="text-xs text-muted-foreground">{entry.name}</span>
+                   <span className="text-xs text-muted-foreground">{entry.name} ({entry.value.toFixed(1)}%)</span>
                 </div>
              ))}
           </div>
