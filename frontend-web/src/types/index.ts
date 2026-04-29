@@ -16,6 +16,30 @@ export interface ApiError {
   code?: string;
 }
 
+export interface ReportJobStartResponse {
+  jobId: string;
+  status: string;
+  progress: number;
+  message: string;
+}
+
+export interface ReportJobStatusResponse {
+  jobId: string;
+  companyId?: number;
+  projectId?: number;
+  status: "queued" | "running" | "completed" | "failed" | string;
+  progress: number;
+  stage: string;
+  message: string;
+  errorMessage?: string;
+  totalSteps: number;
+  completedSteps: number;
+  remainingSteps: number;
+  startedAt?: string;
+  updatedAt?: string;
+  finishedAt?: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;

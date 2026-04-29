@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { loadingBus } from './loadingBus';
+import { readSessionToken } from '@/lib/authStorage';
 import type { 
   User, 
   AuthResponse,
@@ -11,7 +12,9 @@ import type {
   Conversion, 
   Invoice, 
   Po, 
-  Project 
+  Project,
+  ReportJobStartResponse,
+  ReportJobStatusResponse,
 } from '../types';
 
 // URL Configuration
@@ -39,18 +42,7 @@ const getResponseMessage = (data: unknown): string | null => {
 };
 
 const getStoredToken = (): string => {
-  let v = '';
-  try {
-    v = localStorage.getItem('token') || '';
-  } catch {
-    v = '';
-  }
-  if (v.trim().length > 0) return v;
-  try {
-    return sessionStorage.getItem('token') || '';
-  } catch {
-    return '';
-  }
+  return readSessionToken();
 };
 
 const getStoredLanguage = (): string => {
@@ -356,8 +348,17 @@ export const reportService = {
     selectedBom: string;
     startDate?: string;
     endDate?: string;
-  }): Promise<void> => {
-    await api.post('/api/liquidation-results/run-report', payload, { timeout: 120000 });
+  }): Promise<ReportJobStartResponse> => {
+    const response = await api.post<ReportJobStartResponse>('/api/liquidation-results/run-report', payload, { timeout: 120000 });
+    return response.data;
+  },
+
+  getReportStatus: async (jobId: string, companyId: number): Promise<ReportJobStatusResponse> => {
+    const response = await api.get<ReportJobStatusResponse>(`/api/liquidation-results/run-report/${jobId}/status`, {
+      params: { companyId },
+      timeout: 15000,
+    });
+    return response.data;
   }
 };
 

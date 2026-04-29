@@ -11,6 +11,7 @@ import logoWhite from '../assets/images/logo-white.png';
 import cameraIcon from '../assets/images/camera-icon.png';
 import type { LoginRequest } from '../types';
 import { useI18n } from '@/i18n/i18n';
+import { storeSessionAuth } from '@/lib/authStorage';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -95,25 +96,6 @@ const LoginPage: React.FC = () => {
     setIsCameraOpen(false);
   };
 
-  const storeSession = (user: unknown, token: string) => {
-    const tokenValue = token.trim();
-    if (!tokenValue) return false;
-    const userValue = JSON.stringify(user ?? null);
-    try {
-      localStorage.setItem('user', userValue);
-      localStorage.setItem('token', tokenValue);
-      return true;
-    } catch {
-      try {
-        sessionStorage.setItem('user', userValue);
-        sessionStorage.setItem('token', tokenValue);
-        return true;
-      } catch {
-        return false;
-      }
-    }
-  };
-
   const captureAndLogin = async () => {
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
@@ -135,7 +117,7 @@ const LoginPage: React.FC = () => {
             setError(t("login.invalidResponseTokenMissing"));
             return;
           }
-          const ok = storeSession(auth.user, token);
+          const ok = storeSessionAuth(auth.user, token);
           if (!ok) {
             setPopupKind("error");
             setError(t("login.storageBlocked"));
@@ -183,7 +165,7 @@ const LoginPage: React.FC = () => {
         setError(t("login.invalidResponseTokenMissing"));
         return;
       }
-      const ok = storeSession(auth.user, token);
+      const ok = storeSessionAuth(auth.user, token);
       if (!ok) {
         setPopupKind("error");
         setError(t("login.storageBlocked"));

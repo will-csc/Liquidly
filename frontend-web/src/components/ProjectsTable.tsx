@@ -3,6 +3,7 @@ import { AlertTriangle, Check, CheckCircle2, Plus, Pencil, Trash2, X } from "luc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { projectService } from "@/services/api";
+import { readSessionUser } from "@/lib/authStorage";
 import type { Project } from "@/types";
 import { getCell, parseExcelFile } from "@/lib/excel";
 import { useI18n } from "@/i18n/i18n";
@@ -52,8 +53,7 @@ const ProjectsTable = () => {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       let data: Project[] = [];
       if (user && user.companyId) {
         data = await projectService.getByCompany(user.companyId);
@@ -137,8 +137,7 @@ const ProjectsTable = () => {
     }
     
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       const payload: Project = {
         name: newItem.name.trim(),
         company: user && user.companyId ? { id: user.companyId } : undefined,
@@ -163,8 +162,7 @@ const ProjectsTable = () => {
         return;
       }
 
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
 
       const payloads: Project[] = [];
       const errors: string[] = [];

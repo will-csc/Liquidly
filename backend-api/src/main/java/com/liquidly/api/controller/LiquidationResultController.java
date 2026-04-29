@@ -1,13 +1,15 @@
 package com.liquidly.api.controller;
 
+import com.liquidly.api.dto.ReportJobStartResponse;
+import com.liquidly.api.dto.ReportJobStatusResponse;
 import com.liquidly.api.model.LiquidationResult;
 import com.liquidly.api.service.LiquidationResultService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/liquidation-results")
@@ -34,7 +36,7 @@ public class LiquidationResultController {
 
     // Run liquidation and send a report email using the provided payload parameters.
     @PostMapping("/run-report")
-    public ResponseEntity<Map<String, Object>> runReport(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<ReportJobStartResponse> runReport(@RequestBody Map<String, Object> payload) {
         Long companyId = payload.get("companyId") == null ? null : Long.valueOf(payload.get("companyId").toString());
         Long projectId = payload.get("projectId") == null ? null : Long.valueOf(payload.get("projectId").toString());
         String toEmail = payload.get("email") == null ? null : payload.get("email").toString();
@@ -42,10 +44,23 @@ public class LiquidationResultController {
         String startDate = payload.get("startDate") == null ? null : payload.get("startDate").toString();
         String endDate = payload.get("endDate") == null ? null : payload.get("endDate").toString();
 
-        liquidationResultService.runLiquidation(companyId, projectId);
-        liquidationResultService.sendReportEmail(companyId, projectId, toEmail, selectedBom, startDate, endDate);
+        ReportJobStartResponse response = liquidationResultService.startReportJob(
+                companyId,
+                projectId,
+                toEmail,
+                selectedBom,
+                startDate,
+                endDate
+        );
+        return ResponseEntity.accepted().body(response);
+    }
 
-        return ResponseEntity.ok(Map.of("message", "ok"));
+    @GetMapping("/run-report/{jobId}/status")
+    public ResponseEntity<ReportJobStatusResponse> getRunReportStatus(
+            @PathVariable String jobId,
+            @RequestParam Long companyId
+    ) {
+        return ResponseEntity.ok(liquidationResultService.getReportJobStatus(jobId, companyId));
     }
 
     // Return all liquidation results.

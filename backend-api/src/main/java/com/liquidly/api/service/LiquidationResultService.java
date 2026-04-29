@@ -1,5 +1,7 @@
 package com.liquidly.api.service;
 
+import com.liquidly.api.dto.ReportJobStartResponse;
+import com.liquidly.api.dto.ReportJobStatusResponse;
 import com.liquidly.api.model.Bom;
 import com.liquidly.api.model.Company;
 import com.liquidly.api.model.Conversion;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -27,6 +30,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class LiquidationResultService {
@@ -51,6 +55,12 @@ public class LiquidationResultService {
 
     @Autowired
     private AuthenticatedUserService authenticatedUserService;
+
+    @Autowired
+    private ReportJobService reportJobService;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     @Value("${email.service.url:http://localhost:5000}")
     private String emailServiceUrl;
@@ -92,8 +102,7 @@ public class LiquidationResultService {
         liquidationResultRepository.delete(getLiquidationResultByIdForCompany(id, authenticatedUserService.getRequiredCompanyId()));
     }
 
-    // Send an email report for a company/project, optionally filtered by BOM and date range.
-    public void sendReportEmail(
+    public ReportJobStartResponse startReportJob(
             Long companyId,
             Long projectId,
             String toEmail,
@@ -105,10 +114,80 @@ public class LiquidationResultService {
         if (resolvedCompanyId == null || projectId == null) {
             throw new RuntimeException("companyId and projectId are required");
         }
+
+        ReportJobStartResponse job = reportJobService.createJob(resolvedCompanyId, projectId);
+        CompletableFuture.runAsync(() -> {
+            try {
+                reportJobService.update(job.getJobId(), 5, "running", "Validando", "Validando os dados do relatório.");
+                transactionTemplate.execute((status) -> {
+                    runLiquidationValidated(resolvedCompanyId, projectId, (progress, stage, message) ->
+                            reportJobService.update(job.getJobId(), progress, "running", stage, message)
+                    );
+                    return null;
+                });
+                sendReportEmailValidated(resolvedCompanyId, projectId, toEmail, selectedBom, startDate, endDate, (progress, stage, message) ->
+                        reportJobService.update(job.getJobId(), progress, "running", stage, message)
+                );
+                reportJobService.complete(job.getJobId(), "Relatório concluído e enviado por email.");
+            } catch (Exception ex) {
+                String message = ex.getMessage() == null || ex.getMessage().isBlank()
+                        ? "Não foi possível concluir o relatório."
+                        : ex.getMessage();
+                reportJobService.fail(job.getJobId(), message);
+            }
+        });
+        return job;
+    }
+
+    public ReportJobStatusResponse getReportJobStatus(String jobId, Long companyId) {
+        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        return reportJobService.getJob(jobId, resolvedCompanyId);
+    }
+
+    // Send an email report for a company/project, optionally filtered by BOM and date range.
+    public void sendReportEmail(
+            Long companyId,
+            Long projectId,
+            String toEmail,
+            String selectedBom,
+            String startDate,
+            String endDate
+    ) {
+        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        sendReportEmailValidated(resolvedCompanyId, projectId, toEmail, selectedBom, startDate, endDate, null);
+    }
+
+    public void sendReportEmail(
+            Long companyId,
+            Long projectId,
+            String toEmail,
+            String selectedBom,
+            String startDate,
+            String endDate,
+            ReportProgressListener progressListener
+    ) {
+        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        sendReportEmailValidated(resolvedCompanyId, projectId, toEmail, selectedBom, startDate, endDate, progressListener);
+    }
+
+    private void sendReportEmailValidated(
+            Long resolvedCompanyId,
+            Long projectId,
+            String toEmail,
+            String selectedBom,
+            String startDate,
+            String endDate,
+            ReportProgressListener progressListener
+    ) {
+        if (resolvedCompanyId == null || projectId == null) {
+            throw new RuntimeException("companyId and projectId are required");
+        }
         requireProjectInCompany(projectId, resolvedCompanyId);
         if (toEmail == null || toEmail.trim().isEmpty()) {
             throw new RuntimeException("Email is required");
         }
+
+        notifyProgress(progressListener, 88, "Preparando arquivo", "Preparando o relatório para envio.");
 
         // Validate and serialize optional BOM filter.
         String bomIdJson = "null";
@@ -163,11 +242,13 @@ public class LiquidationResultService {
             }
 
             try {
+                notifyProgress(progressListener, 95, "Enviando email", "Enviando o relatório por email.");
                 HttpResponse<String> response = HttpClient.newHttpClient()
                         .send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
                 int status = response.statusCode();
                 if (status >= 200 && status < 300) {
+                    notifyProgress(progressListener, 99, "Finalizando", "Finalizando o envio do relatório.");
                     return;
                 }
                 if (status >= 400 && status < 500) {
@@ -190,11 +271,22 @@ public class LiquidationResultService {
     // Run liquidation for a company/project by consuming invoices and POs against BOM requirements.
     public List<LiquidationResult> runLiquidation(Long companyId, Long projectId) {
         Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        return runLiquidationValidated(resolvedCompanyId, projectId, null);
+    }
+
+    @Transactional
+    public List<LiquidationResult> runLiquidation(Long companyId, Long projectId, ReportProgressListener progressListener) {
+        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
+        return runLiquidationValidated(resolvedCompanyId, projectId, progressListener);
+    }
+
+    private List<LiquidationResult> runLiquidationValidated(Long resolvedCompanyId, Long projectId, ReportProgressListener progressListener) {
         if (resolvedCompanyId == null || projectId == null) {
             throw new RuntimeException("companyId and projectId are required");
         }
 
         Project project = requireProjectInCompany(projectId, resolvedCompanyId);
+        notifyProgress(progressListener, 10, "Carregando dados", "Carregando BOM, invoices e POs.");
 
         // Clear previous results for the same company/project to keep the run idempotent.
         liquidationResultRepository.deleteByCompanyIdAndProjectId(resolvedCompanyId, projectId);
@@ -213,6 +305,8 @@ public class LiquidationResultService {
         if (boms.isEmpty()) {
             throw new RuntimeException("Cannot run report without BOM data for the selected project");
         }
+
+        notifyProgress(progressListener, 18, "Preparando liquidação", "Preparando os dados para processar a liquidação.");
 
         // Initialize remaining quantities if missing.
         for (Bom b : boms) {
@@ -250,9 +344,14 @@ public class LiquidationResultService {
         String fallbackProjectName = project.getName() == null ? "" : project.getName();
 
         // Main liquidation loop: consume invoice quantities first, then PO quantities, updating remaining balances.
-        for (Bom bom : boms) {
+        int totalBoms = Math.max(1, boms.size());
+        for (int bomIndex = 0; bomIndex < boms.size(); bomIndex++) {
+            Bom bom = boms.get(bomIndex);
             BigDecimal bomRemaining = nz(bom.getRemainingQntd());
-            if (bomRemaining.signum() <= 0) continue;
+            if (bomRemaining.signum() <= 0) {
+                notifyLiquidationProgress(progressListener, bomIndex + 1, totalBoms);
+                continue;
+            }
             String bomItemCode = normalize(bom.getItemCode());
 
             for (Invoice inv : invoices) {
@@ -285,7 +384,10 @@ public class LiquidationResultService {
                 if (bomRemaining.signum() <= 0) break;
             }
 
-            if (bomRemaining.signum() <= 0) continue;
+            if (bomRemaining.signum() <= 0) {
+                notifyLiquidationProgress(progressListener, bomIndex + 1, totalBoms);
+                continue;
+            }
 
             for (Po po : pos) {
                 BigDecimal poRemaining = nz(po.getRemainingQntd());
@@ -316,13 +418,16 @@ public class LiquidationResultService {
 
                 if (bomRemaining.signum() <= 0) break;
             }
+            notifyLiquidationProgress(progressListener, bomIndex + 1, totalBoms);
         }
 
         // Persist remaining quantities back into source tables and store the generated results.
+        notifyProgress(progressListener, 82, "Salvando dados", "Salvando os resultados e saldos processados.");
         bomRepository.saveAll(boms);
         invoiceRepository.saveAll(invoices);
         if (!pos.isEmpty()) poRepository.saveAll(pos);
 
+        notifyProgress(progressListener, 86, "Persistindo relatório", "Persistindo os resultados finais do relatório.");
         return liquidationResultRepository.saveAll(results);
     }
 
@@ -334,6 +439,23 @@ public class LiquidationResultService {
     private Project requireProjectInCompany(Long projectId, Long companyId) {
         return projectRepository.findByIdAndCompanyId(projectId, companyId)
                 .orElseThrow(() -> new RuntimeException("Project not found with id: " + projectId));
+    }
+
+    private void notifyLiquidationProgress(ReportProgressListener progressListener, int completedItems, int totalItems) {
+        int progress = 20 + (int) Math.round((completedItems * 60.0) / Math.max(1, totalItems));
+        String message = String.format("Processando itens da BOM (%d de %d).", completedItems, totalItems);
+        notifyProgress(progressListener, progress, "Processando liquidação", message);
+    }
+
+    private void notifyProgress(ReportProgressListener progressListener, int progress, String stage, String message) {
+        if (progressListener != null) {
+            progressListener.update(progress, stage, message);
+        }
+    }
+
+    @FunctionalInterface
+    public interface ReportProgressListener {
+        void update(int progress, String stage, String message);
     }
 
     // Resolve the latest unit conversion factor for an item within a company.

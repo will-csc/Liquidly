@@ -1,14 +1,22 @@
-import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, Mail, Play, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, CheckCircle2, LoaderCircle, Mail, Play, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { bomService, invoiceService, poService, projectService, reportService } from "@/services/api";
-import type { Bom, Invoice, Po, Project } from "@/types";
+import { readSessionUser } from "@/lib/authStorage";
+import type { Bom, Invoice, Po, Project, ReportJobStatusResponse } from "@/types";
 import { useI18n } from "@/i18n/i18n";
 
 interface SectionProps {
   title: string;
   children: React.ReactNode;
+}
+
+interface NoticeState {
+  type: "error" | "success";
+  title: string;
+  message: string;
+  details?: string[];
 }
 
 const Section = ({ title, children }: SectionProps) => (
@@ -124,6 +132,8 @@ const clampDate = (value: string, bounds: { min?: string; max?: string }) => {
   return value;
 };
 
+const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
 const normalizeText = (value?: string | number | null) => String(value ?? "").trim().toLowerCase();
 
 const isBomFromProject = (bom: Bom, project?: Project) => {
@@ -146,30 +156,36 @@ const ReportsForm = () => {
     minDate: "",
     maxDate: "",
   });
-  const [notice, setNotice] = useState<{ type: "error" | "success"; message: string } | null>(null);
-  const [noticeTimer, setNoticeTimer] = useState<number | null>(null);
+  const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [reportProgress, setReportProgress] = useState<ReportJobStatusResponse | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const noticeTimerRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
-  const showNotice = (type: "error" | "success", message: string) => {
-    setNotice({ type, message });
-    if (noticeTimer) window.clearTimeout(noticeTimer);
-    const next = window.setTimeout(() => {
+  const showNotice = (type: "error" | "success", title: string, message: string, details?: string[]) => {
+    setNotice({ type, title, message, details });
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    if (type === "error") {
+      noticeTimerRef.current = null;
+      return;
+    }
+    noticeTimerRef.current = window.setTimeout(() => {
       setNotice(null);
+      noticeTimerRef.current = null;
     }, 3500);
-    setNoticeTimer(next);
   };
 
   useEffect(() => {
     return () => {
-      if (noticeTimer) window.clearTimeout(noticeTimer);
+      isMountedRef.current = false;
+      if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
     };
-  }, [noticeTimer]);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const userStr = localStorage.getItem("user");
-        const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+        const user = readSessionUser<{ companyId?: number }>();
 
         if (user && user.companyId) {
           const [projectsData, bomsData, invoicesData, posData] = await Promise.all([
@@ -213,6 +229,7 @@ const ReportsForm = () => {
   const filteredBoms = selectedProjectData ? boms.filter((bom) => isBomFromProject(bom, selectedProjectData)) : [];
   const projectSelected = Boolean(selectedProject);
   const canRunReport = Boolean(selectedProject && selectedBom && startDate && endDate) && !isRunning;
+  const remainingPercent = reportProgress ? Math.max(0, 100 - reportProgress.progress) : 0;
 
   useEffect(() => {
     if (!selectedBom) return;
@@ -228,6 +245,7 @@ const ReportsForm = () => {
       min: invoiceDateRange.minDate || undefined,
       max: endDate || invoiceDateRange.maxDate || undefined,
     });
+    setReportProgress(null);
     setStartDate(nextStartDate);
   };
 
@@ -236,29 +254,48 @@ const ReportsForm = () => {
       min: startDate || invoiceDateRange.minDate || undefined,
       max: invoiceDateRange.maxDate || undefined,
     });
+    setReportProgress(null);
     setEndDate(nextEndDate);
   };
 
-  const handleRunReport = async () => {
-    if (startDate && endDate && startDate > endDate) {
-      showNotice("error", "A data inicial deve ser menor ou igual à data final.");
-      return;
-    }
-    if (!selectedProject) {
-      showNotice("error", "Selecione um projeto.");
-      return;
-    }
-    if (!selectedBom) {
-      showNotice("error", "Selecione os itens (ex: All).");
-      return;
-    }
-    if (invoices.length === 0) {
-      showNotice("error", "Não existem invoices cadastradas para a empresa.");
-      return;
+  const pollReportProgress = async (jobId: string, companyId: number) => {
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+      const status = await reportService.getReportStatus(jobId, companyId);
+      if (!isMountedRef.current) return;
+
+      setReportProgress(status);
+
+      if (status.status === "completed") {
+        showNotice("success", "Relatório concluído", status.message || "O relatório foi gerado com sucesso.");
+        setIsRunning(false);
+        return;
+      }
+
+      if (status.status === "failed") {
+        showNotice(
+          "error",
+          "Falha ao executar relatório",
+          status.errorMessage || status.message || "O backend não conseguiu concluir o relatório."
+        );
+        setIsRunning(false);
+        return;
+      }
+
+      await wait(1200);
     }
 
-    const userStr = localStorage.getItem("user");
-    const user = userStr ? (JSON.parse(userStr) as { companyId?: number; email?: string }) : null;
+    if (isMountedRef.current) {
+      showNotice(
+        "error",
+        "Tempo de processamento excedido",
+        "O relatório demorou mais do que o esperado para responder. Tente novamente em instantes."
+      );
+      setIsRunning(false);
+    }
+  };
+
+  const handleRunReport = async () => {
+    const user = readSessionUser<{ companyId?: number; email?: string }>();
     const companyId = user?.companyId;
     const email = user?.email;
     const selectedProjectId = Number(selectedProject);
@@ -267,22 +304,35 @@ const ReportsForm = () => {
         ? filteredBoms
         : filteredBoms.filter((bom) => String(bom.id ?? "") === selectedBom);
     const projectInvoices = invoices.filter((invoice) => invoice.project?.id === selectedProjectId);
+    const validationErrors: string[] = [];
+
+    if (startDate && endDate && startDate > endDate) {
+      validationErrors.push("A data inicial deve ser menor ou igual à data final.");
+    }
+    if (!selectedProject) {
+      validationErrors.push("Selecione um projeto.");
+    }
+    if (!selectedBom) {
+      validationErrors.push("Selecione os itens da BOM.");
+    }
+    if (!startDate || !endDate) {
+      validationErrors.push("Preencha o período inicial e final.");
+    }
+    if (invoices.length === 0) {
+      validationErrors.push("Não existem invoices cadastradas para a empresa.");
+    }
 
     if (!companyId) {
-      showNotice("error", "Company não encontrado.");
-      return;
+      validationErrors.push("Company não encontrado.");
     }
     if (!email) {
-      showNotice("error", "Email do usuário não encontrado.");
-      return;
+      validationErrors.push("Email do usuário não encontrado.");
     }
     if (projectInvoices.length === 0) {
-      showNotice("error", "Não existem invoices para o projeto selecionado.");
-      return;
+      validationErrors.push("Não existem invoices para o projeto selecionado.");
     }
     if (bomScope.length === 0) {
-      showNotice("error", "Não existem itens de BOM para o projeto selecionado.");
-      return;
+      validationErrors.push("Não existem itens de BOM para o projeto selecionado.");
     }
 
     const poItemCodes = new Set(pos.map((poItem) => normalizeText(poItem.itemCode)).filter(Boolean));
@@ -294,28 +344,46 @@ const ReportsForm = () => {
         .map((bom) => bom.itemCode)
         .join(", ");
       const suffix = missingPoItems.length > 5 ? "..." : "";
-      showNotice("error", `Existem itens da BOM sem PO cadastrado na empresa: ${preview}${suffix}`);
+      validationErrors.push(`Existem itens da BOM sem PO cadastrado na empresa: ${preview}${suffix}`);
+    }
+
+    if (validationErrors.length > 0) {
+      showNotice(
+        "error",
+        "Não foi possível iniciar o relatório",
+        "Corrija os pontos abaixo antes de continuar.",
+        validationErrors
+      );
       return;
     }
 
+    const safeCompanyId = companyId as number;
+    const safeEmail = email as string;
+    setReportProgress(null);
     setIsRunning(true);
+    setNotice(null);
     try {
-      await reportService.runReport({
-        companyId,
+      const job = await reportService.runReport({
+        companyId: safeCompanyId,
         projectId: selectedProjectId,
-        email,
+        email: safeEmail,
         selectedBom,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       });
-      showNotice("success", t("report.notice.success"));
+      const initialStatus = await reportService.getReportStatus(job.jobId, safeCompanyId);
+      if (isMountedRef.current) {
+        setReportProgress(initialStatus);
+      }
+      await pollReportProgress(job.jobId, safeCompanyId);
     } catch (err: unknown) {
       type ErrorWithResponse = { response?: { data?: { message?: string } } };
       const maybe = err as ErrorWithResponse;
       const message = maybe?.response?.data?.message || t("report.notice.failed");
-      showNotice("error", message);
-    } finally {
+      showNotice("error", "Falha ao iniciar relatório", message);
       setIsRunning(false);
+    } finally {
+      if (!isMountedRef.current) return;
     }
   };
 
@@ -335,7 +403,10 @@ const ReportsForm = () => {
           onChange={(e) => {
             setSelectedProject(e.target.value);
             setSelectedBom("");
+            setReportProgress(null);
+            setNotice(null);
           }}
+          disabled={isRunning}
         />
       </Section>
       <div className="h-px bg-border" />
@@ -348,8 +419,11 @@ const ReportsForm = () => {
             ...filteredBoms.map((b) => ({ value: b.id || "", label: `${b.itemCode} - ${b.itemName}` })),
           ]}
           value={selectedBom}
-          onChange={(e) => setSelectedBom(e.target.value)}
-          disabled={!projectSelected}
+          onChange={(e) => {
+            setSelectedBom(e.target.value);
+            setReportProgress(null);
+          }}
+          disabled={!projectSelected || isRunning}
         />
       </Section>
       <div className="h-px bg-border" />
@@ -362,7 +436,7 @@ const ReportsForm = () => {
           onChange={(e) => handleStartDateChange(e.target.value)}
           min={invoiceDateRange.minDate || undefined}
           max={endDate || invoiceDateRange.maxDate || undefined}
-          disabled={!projectSelected}
+          disabled={!projectSelected || isRunning}
         />
         <FieldRow
           label={t("report.label.endDate")}
@@ -372,9 +446,54 @@ const ReportsForm = () => {
           onChange={(e) => handleEndDateChange(e.target.value)}
           min={startDate || invoiceDateRange.minDate || undefined}
           max={invoiceDateRange.maxDate || undefined}
-          disabled={!projectSelected}
+          disabled={!projectSelected || isRunning}
         />
       </Section>
+
+      {reportProgress && (
+        <div className="rounded-2xl border border-border/60 bg-secondary/30 p-4 shadow-card">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-sm font-semibold text-foreground">Acompanhamento do relatório</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {reportProgress.stage} · {reportProgress.message}
+              </div>
+            </div>
+            <div
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                reportProgress.status === "failed"
+                  ? "bg-destructive/10 text-destructive"
+                  : reportProgress.status === "completed"
+                    ? "bg-primary/10 text-primary"
+                    : "bg-secondary text-foreground"
+              }`}
+            >
+              {reportProgress.progress}%
+            </div>
+          </div>
+
+          <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-secondary">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                reportProgress.status === "failed" ? "bg-destructive" : "bg-primary"
+              }`}
+              style={{ width: `${reportProgress.progress}%` }}
+            />
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Concluído: {reportProgress.completedSteps}%</span>
+            <span>Falta: {remainingPercent}%</span>
+            <span>Etapas restantes: {reportProgress.remainingSteps}</span>
+          </div>
+
+          {reportProgress.errorMessage && (
+            <div className="mt-3 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {reportProgress.errorMessage}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="pt-2 space-y-2">
         <Button
@@ -382,8 +501,8 @@ const ReportsForm = () => {
           onClick={handleRunReport}
           disabled={!canRunReport}
         >
-          <Play className="w-4 h-4 mr-2" />
-          {isRunning ? t("report.button.running") : t("report.button.run")}
+          {isRunning ? <LoaderCircle className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+          {isRunning ? `${t("report.button.running")} ${reportProgress?.progress ?? 0}%` : t("report.button.run")}
         </Button>
         <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
           <Mail className="w-3 h-3" />
@@ -394,25 +513,53 @@ const ReportsForm = () => {
       {notice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
           <div
-            className={`flex items-start gap-3 rounded-xl border p-3 shadow-elevated ${
-              notice.type === "error" ? "border-destructive/30 bg-destructive/10" : "border-primary/30 bg-primary/10"
-            } pointer-events-auto w-full max-w-sm`}
+            className={`pointer-events-auto w-full max-w-lg rounded-2xl border p-5 shadow-elevated ${
+              notice.type === "error"
+                ? "border-destructive/30 bg-gradient-to-br from-destructive/10 via-card to-card"
+                : "border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card"
+            }`}
           >
-            <div className="pt-0.5">
-              {notice.type === "error" ? (
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-              )}
+            <div className="flex items-start gap-3">
+              <div className={`rounded-xl p-2 ${notice.type === "error" ? "bg-destructive/10" : "bg-primary/10"}`}>
+                {notice.type === "error" ? (
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-base font-semibold text-foreground">{notice.title}</div>
+                    <div className="mt-1 text-sm text-muted-foreground whitespace-pre-line">{notice.message}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                    onClick={() => setNotice(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {notice.details && notice.details.length > 0 && (
+                  <div className="mt-4 space-y-2 max-h-56 overflow-auto">
+                    {notice.details.map((detail, index) => (
+                      <div
+                        key={`${detail}-${index}`}
+                        className={`rounded-xl border px-3 py-2 text-sm ${
+                          notice.type === "error"
+                            ? "border-destructive/15 bg-destructive/5 text-foreground"
+                            : "border-primary/15 bg-primary/5 text-foreground"
+                        }`}
+                      >
+                        {detail}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex-1 text-sm text-foreground whitespace-pre-line max-h-40 overflow-auto">{notice.message}</div>
-            <button
-              type="button"
-              className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-              onClick={() => setNotice(null)}
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
         </div>
       )}

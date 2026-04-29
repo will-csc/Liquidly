@@ -3,6 +3,7 @@ import { AlertTriangle, Check, CheckCircle2, Plus, Pencil, Trash2, X } from "luc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { bomService, projectService } from "@/services/api";
+import { readSessionUser } from "@/lib/authStorage";
 import type { Bom, Project } from "@/types";
 import { getCell, parseExcelFile, toNumber } from "@/lib/excel";
 import { useI18n } from "@/i18n/i18n";
@@ -68,8 +69,7 @@ const BomTable = () => {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       let data: Bom[] = [];
       if (user && user.companyId) {
         data = await bomService.getByCompany(user.companyId);
@@ -104,8 +104,7 @@ const BomTable = () => {
 
   const fetchProjects = useCallback(async () => {
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       let data: Project[] = [];
       if (user && user.companyId) {
         data = await projectService.getByCompany(user.companyId);
@@ -281,8 +280,7 @@ const BomTable = () => {
     }
     
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       const companyId = user?.companyId;
       const project = projects.find((p) => p.id === newItem.projectId);
       const bomData: Bom = {
@@ -348,8 +346,7 @@ const BomTable = () => {
         return;
       }
 
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
 
       const payloads: Bom[] = [];
       const errors: string[] = [];

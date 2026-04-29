@@ -3,6 +3,7 @@ import { AlertTriangle, Check, CheckCircle2, Plus, Pencil, Trash2, X } from "luc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { bomService, conversionService, invoiceService } from "@/services/api";
+import { readSessionUser } from "@/lib/authStorage";
 import type { Bom, Conversion as ApiConversion, Invoice } from "@/types";
 import { getCell, parseExcelFile, toNumber } from "@/lib/excel";
 import { useI18n } from "@/i18n/i18n";
@@ -72,8 +73,7 @@ const ConversionsTable = () => {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       let data: ApiConversion[] = [];
       if (user && user.companyId) {
         data = await conversionService.getByCompany(user.companyId);
@@ -111,8 +111,7 @@ const ConversionsTable = () => {
 
   const fetchBomLookup = useCallback(async () => {
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       const companyId = user?.companyId;
       const boms = companyId ? await bomService.getByCompany(companyId) : await bomService.getAll();
       const map: Record<string, string> = {};
@@ -143,8 +142,7 @@ const ConversionsTable = () => {
 
   const fetchInvoices = useCallback(async () => {
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       const companyId = user?.companyId;
       const data = companyId ? await invoiceService.getByCompany(companyId) : await invoiceService.getAll();
       setInvoices(data);
@@ -317,8 +315,7 @@ const ConversionsTable = () => {
     }
     
     try {
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       const companyId = user?.companyId;
       const conversionData: ApiConversion = {
         itemCode: newItem.itemCode,
@@ -360,8 +357,7 @@ const ConversionsTable = () => {
         return;
       }
 
-      const userStr = localStorage.getItem("user");
-      const user = userStr ? (JSON.parse(userStr) as { companyId?: number }) : null;
+      const user = readSessionUser<{ companyId?: number }>();
       const companyId = user?.companyId;
 
       const payloads: ApiConversion[] = [];

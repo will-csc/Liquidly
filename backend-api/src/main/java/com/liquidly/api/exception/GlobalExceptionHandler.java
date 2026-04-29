@@ -106,6 +106,10 @@ public class GlobalExceptionHandler {
             status = HttpStatus.BAD_REQUEST;
             code = "PASSWORD_SPECIAL_REQUIRED";
             messageKey = "error.validation.password.special";
+        } else if (msg.contains("Report job not found")) {
+            status = HttpStatus.NOT_FOUND;
+            code = "REPORT_JOB_NOT_FOUND";
+            messageKey = "error.internal";
         } else if (msg.contains("not found")) {
             status = HttpStatus.NOT_FOUND;
             code = "NOT_FOUND";

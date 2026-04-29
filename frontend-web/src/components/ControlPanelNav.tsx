@@ -15,6 +15,7 @@ import { useI18n } from "@/i18n/i18n";
 import type { User as StoredUser } from "@/types";
 import { Button } from "@/components/ui/button";
 import { userService } from "@/services/api";
+import { clearAuthSession, readSessionUser } from "@/lib/authStorage";
 
 const navItems = [
   { icon: Home, fallback: homeIcon, labelKey: "nav.home", path: "/dashboard" },
@@ -24,47 +25,7 @@ const navItems = [
   { icon: ArrowLeftRight, fallback: conversionsIcon, labelKey: "nav.conversions", path: "/dashboard/conversions" },
 ];
 
-const readStoredUser = (): StoredUser | null => {
-  const tryParse = (raw: string | null): StoredUser | null => {
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as StoredUser;
-    } catch {
-      return null;
-    }
-  };
-
-  try {
-    const user = tryParse(localStorage.getItem("user"));
-    if (user) return user;
-  } catch {
-    void 0;
-  }
-
-  try {
-    const user = tryParse(sessionStorage.getItem("user"));
-    if (user) return user;
-  } catch {
-    void 0;
-  }
-
-  return null;
-};
-
-const clearSession = () => {
-  try {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-  } catch {
-    void 0;
-  }
-  try {
-    sessionStorage.removeItem("user");
-    sessionStorage.removeItem("token");
-  } catch {
-    void 0;
-  }
-};
+const readStoredUser = (): StoredUser | null => readSessionUser<StoredUser>();
 
 const redirectToLanding = () => {
   window.location.replace("/");
@@ -109,7 +70,7 @@ const ControlPanelNav = () => {
     setDeleteError(null);
     try {
       await userService.delete(user.id);
-      clearSession();
+      clearAuthSession();
       setIsDeleteOpen(false);
       redirectToLanding();
     } catch (error) {
@@ -172,7 +133,7 @@ const ControlPanelNav = () => {
               <button
                 className="w-full text-left px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors flex items-center gap-3 font-medium"
                 onClick={() => {
-                  clearSession();
+                  clearAuthSession();
                   setIsMenuOpen(false);
                   redirectToLanding();
                 }}

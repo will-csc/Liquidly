@@ -10,62 +10,11 @@ import BomPage from '../pages/BomPage';
 import ReportPage from '../pages/ReportPage';
 import ConversionsPage from '../pages/ConversionsPage';
 import ProjectsPage from '../pages/ProjectsPage';
-
-const hasValidSession = () => {
-  const token = (() => {
-    let v: string | null = null;
-    try {
-      v = localStorage.getItem("token");
-    } catch {
-      void 0;
-    }
-    if (v && v.trim().length > 0) return v;
-    try {
-      return sessionStorage.getItem("token");
-    } catch {
-      return null;
-    }
-  })();
-  if (token && token.trim().length > 0) return true;
-
-  const raw = (() => {
-    let v: string | null = null;
-    try {
-      v = localStorage.getItem("user");
-    } catch {
-      void 0;
-    }
-    if (v && v.trim().length > 0) return v;
-    try {
-      return sessionStorage.getItem("user");
-    } catch {
-      return null;
-    }
-  })();
-  if (!raw) return false;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return false;
-    const maybe = parsed as { email?: unknown; id?: unknown; user?: unknown };
-    const rootEmail = typeof maybe.email === "string" && maybe.email.trim().length > 0;
-    const rootId = typeof maybe.id === "number" || typeof maybe.id === "string";
-    if (rootEmail || rootId) return true;
-
-    if (maybe.user && typeof maybe.user === "object") {
-      const nested = maybe.user as { email?: unknown; id?: unknown };
-      const hasEmail = typeof nested.email === "string" && nested.email.trim().length > 0;
-      const hasId = typeof nested.id === "number" || typeof nested.id === "string";
-      return hasEmail || hasId;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-};
+import { hasActiveSession } from '@/lib/authStorage';
 
 const RequireAuth = ({ children }: { children: React.ReactElement }) => {
   const location = useLocation();
-  if (!hasValidSession()) {
+  if (!hasActiveSession()) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
   return children;
@@ -75,7 +24,7 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={hasValidSession() ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+      <Route path="/login" element={hasActiveSession() ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route
