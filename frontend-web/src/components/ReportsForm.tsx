@@ -515,8 +515,8 @@ const ReportsForm = () => {
           <div
             className={`pointer-events-auto w-full max-w-lg rounded-2xl border p-5 shadow-elevated ${
               notice.type === "error"
-                ? "border-destructive/30 bg-gradient-to-br from-destructive/10 via-card to-card"
-                : "border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card"
+                ? "border-destructive/30 bg-card"
+                : "border-primary/30 bg-card"
             }`}
           >
             <div className="flex items-start gap-3">
@@ -549,8 +549,8 @@ const ReportsForm = () => {
                         key={`${detail}-${index}`}
                         className={`rounded-xl border px-3 py-2 text-sm ${
                           notice.type === "error"
-                            ? "border-destructive/15 bg-destructive/5 text-foreground"
-                            : "border-primary/15 bg-primary/5 text-foreground"
+                            ? "border-destructive/15 bg-card text-foreground"
+                            : "border-primary/15 bg-card text-foreground"
                         }`}
                       >
                         {detail}
