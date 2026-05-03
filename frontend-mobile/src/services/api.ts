@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import { 
   User, 
   AuthResponse,
@@ -10,7 +11,9 @@ import {
   Conversion, 
   Invoice, 
   Po, 
-  Project 
+  Project,
+  ReportJobStartResponse,
+  ReportJobStatusResponse,
 } from '../types';
 import { userStorage } from './userStorage';
 
@@ -246,6 +249,23 @@ export const resetApiUrl = () => {
 
 export const getCurrentBaseUrl = () => currentBaseUrl;
 
+const getDownloadFilename = (headers?: Record<string, string>): string => {
+  const contentDisposition = headers?.['content-disposition'] || headers?.['Content-Disposition'];
+  if (!contentDisposition) return 'liquidly_report.xlsx';
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+  const basicMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  return basicMatch?.[1] || 'liquidly_report.xlsx';
+};
+
+const buildApiUrl = (path: string) => `${currentBaseUrl}${path}`;
+
 // --- API Services ---
 
 export const authService = {
@@ -290,12 +310,37 @@ export const liquidationResultService = {
   runReport: async (payload: {
     companyId: number;
     projectId: number;
-    email: string;
     selectedBom?: string;
     startDate?: string;
     endDate?: string;
-  }): Promise<void> => {
-    await api.post('/api/liquidation-results/run-report', payload);
+  }): Promise<ReportJobStartResponse> => {
+    const response = await api.post<ReportJobStartResponse>('/api/liquidation-results/run-report', payload, {
+      timeout: 120000,
+    });
+    return response.data;
+  },
+
+  getReportStatus: async (jobId: string, companyId: number): Promise<ReportJobStatusResponse> => {
+    const response = await api.get<ReportJobStatusResponse>(`/api/liquidation-results/run-report/${jobId}/status`, {
+      params: { companyId },
+      timeout: 15000,
+    });
+    return response.data;
+  },
+
+  downloadReport: async (jobId: string, companyId: number): Promise<{ uri: string; fileName: string }> => {
+    const token = userStorage.getToken();
+    const downloadUrl = buildApiUrl(
+      `/api/liquidation-results/run-report/${jobId}/download?companyId=${encodeURIComponent(String(companyId))}`
+    );
+    const targetFile = `${FileSystem.cacheDirectory || FileSystem.documentDirectory}liquidly-report-${jobId}.xlsx`;
+    const result = await FileSystem.downloadAsync(downloadUrl, targetFile, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return {
+      uri: result.uri,
+      fileName: getDownloadFilename(result.headers),
+    };
   }
 };
 

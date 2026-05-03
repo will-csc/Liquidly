@@ -11,6 +11,8 @@ public class ReportJobStatusResponse {
     private String stage;
     private String message;
     private String errorMessage;
+    private boolean downloadReady;
+    private String fileName;
     private int totalSteps;
     private int completedSteps;
     private int remainingSteps;
@@ -80,6 +82,22 @@ public class ReportJobStatusResponse {
 
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
+    }
+
+    public boolean isDownloadReady() {
+        return downloadReady;
+    }
+
+    public void setDownloadReady(boolean downloadReady) {
+        this.downloadReady = downloadReady;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
     }
 
     public int getTotalSteps() {

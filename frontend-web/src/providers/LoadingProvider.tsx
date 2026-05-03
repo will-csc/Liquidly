@@ -121,12 +121,6 @@ export const LoadingProvider = ({ children }: { children: React.ReactNode }) => 
                 <span>{t("common.loadingShort")}</span>
               </div>
             </div>
-
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              <div className="h-2 rounded-full bg-primary/25 animate-pulse" />
-              <div className="h-2 rounded-full bg-primary/40 animate-pulse [animation-delay:150ms]" />
-              <div className="h-2 rounded-full bg-primary/25 animate-pulse [animation-delay:300ms]" />
-            </div>
           </div>
         </div>
       ) : null}

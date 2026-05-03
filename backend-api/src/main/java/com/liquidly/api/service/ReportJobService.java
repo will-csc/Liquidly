@@ -58,6 +58,10 @@ public class ReportJobService {
     }
 
     public void complete(String jobId, String message) {
+        complete(jobId, message, null, null, null);
+    }
+
+    public void complete(String jobId, String message, byte[] fileContent, String fileName, String contentType) {
         JobState state = requireJob(jobId);
         synchronized (state) {
             state.status = "completed";
@@ -69,6 +73,9 @@ public class ReportJobService {
             state.updatedAt = Instant.now();
             state.finishedAt = state.updatedAt;
             state.errorMessage = null;
+            state.fileContent = fileContent;
+            state.fileName = fileName;
+            state.contentType = contentType;
         }
     }
 
@@ -106,6 +113,8 @@ public class ReportJobService {
         response.setStage(state.stage);
         response.setMessage(state.message);
         response.setErrorMessage(state.errorMessage);
+        response.setDownloadReady(state.fileContent != null && state.fileContent.length > 0);
+        response.setFileName(state.fileName);
         response.setTotalSteps(state.totalSteps);
         response.setCompletedSteps(state.completedSteps);
         response.setRemainingSteps(state.remainingSteps);
@@ -113,6 +122,28 @@ public class ReportJobService {
         response.setUpdatedAt(state.updatedAt);
         response.setFinishedAt(state.finishedAt);
         return response;
+    }
+
+    public ReportFile getReportFile(String jobId, Long companyId) {
+        JobState state = jobs.get(jobId);
+        if (state == null) {
+            throw new RuntimeException("Report job not found");
+        }
+        if (companyId != null && state.companyId != null && !state.companyId.equals(companyId)) {
+            throw new RuntimeException("Report job not found");
+        }
+        synchronized (state) {
+            if (state.fileContent == null || state.fileContent.length == 0) {
+                throw new RuntimeException("Report file not ready");
+            }
+            return new ReportFile(
+                    state.fileContent.clone(),
+                    state.fileName == null || state.fileName.isBlank() ? "liquidly_report.xlsx" : state.fileName,
+                    state.contentType == null || state.contentType.isBlank()
+                            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            : state.contentType
+            );
+        }
     }
 
     private static final class JobState {
@@ -130,5 +161,11 @@ public class ReportJobService {
         private Instant startedAt;
         private Instant updatedAt;
         private Instant finishedAt;
+        private byte[] fileContent;
+        private String fileName;
+        private String contentType;
+    }
+
+    public record ReportFile(byte[] content, String fileName, String contentType) {
     }
 }

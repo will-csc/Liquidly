@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -8,8 +8,10 @@ import {
   TouchableOpacity, 
   Modal, 
   FlatList,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
+import * as Sharing from 'expo-sharing';
 import { theme } from '../styles/theme';
 import { useI18n } from '../i18n/i18n';
 import { projectService, bomService, invoiceService, poService, liquidationResultService } from '../services/api';
@@ -29,6 +31,8 @@ interface SelectionItem {
   label: string;
   value: string | number;
 }
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const Report = () => {
   const { t } = useI18n();
@@ -51,6 +55,13 @@ const Report = () => {
   const [modalTitle, setModalTitle] = useState('');
   const [modalData, setModalData] = useState<SelectionItem[]>([]);
   const [currentSelectionType, setCurrentSelectionType] = useState<'project' | 'bom' | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -115,9 +126,46 @@ const Report = () => {
     setModalVisible(false);
   };
 
+  const openDownloadedReport = async (uri: string) => {
+    if (Platform.OS === 'web') {
+      return t('report.runSuccess');
+    }
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        dialogTitle: t('report.shareTitle'),
+      });
+      return t('report.runSuccess');
+    }
+
+    return t('report.runSuccessNoShare');
+  };
+
+  const pollReportProgress = async (jobId: string, companyId: number): Promise<string> => {
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+      const status = await liquidationResultService.getReportStatus(jobId, companyId);
+      if (!isMountedRef.current) return t('report.runFailed');
+
+      if (status.status === 'completed') {
+        const { uri } = await liquidationResultService.downloadReport(jobId, companyId);
+        return await openDownloadedReport(uri);
+      }
+
+      if (status.status === 'failed') {
+        throw new Error(status.errorMessage || status.message || t('report.runFailed'));
+      }
+
+      await wait(1200);
+    }
+
+    throw new Error(t('report.runTimeout'));
+  };
+
   const handleRunReport = async () => {
     const user = userStorage.getUser();
-    if (!user || !user.companyId || !user.email) {
+    if (!user || !user.companyId) {
       setErrorMessage(t('report.loginRequired'));
       return;
     }
@@ -149,16 +197,15 @@ const Report = () => {
 
     setRunningReport(true);
     try {
-      await liquidationResultService.runReport({
+      const job = await liquidationResultService.runReport({
         companyId: user.companyId,
         projectId: selectedProjectId,
-        email: user.email,
         selectedBom: selectedBom?.value ? String(selectedBom.value) : undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined
       });
-
-      Alert.alert(t('common.success'), t('report.runSuccess'));
+      const successMessage = await pollReportProgress(job.jobId, user.companyId);
+      Alert.alert(t('common.success'), successMessage);
     } catch (error: any) {
       console.error('Failed to run report:', error);
       setErrorMessage(getErrorMessage(error, t('report.runFailed')));
@@ -219,7 +266,7 @@ const Report = () => {
               onPress={handleRunReport}
               loading={runningReport}
             />
-            <IconNote iconName="mail-outline" text={t('report.helper.emailSent')} />
+            <IconNote iconName="download-outline" text={t('report.helper.download')} />
           </View>
         </Card>
 

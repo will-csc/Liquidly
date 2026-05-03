@@ -16,18 +16,12 @@ import com.liquidly.api.repository.LiquidationResultRepository;
 import com.liquidly.api.repository.PoRepository;
 import com.liquidly.api.repository.ProjectRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -62,14 +56,8 @@ public class LiquidationResultService {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
-    @Value("${email.service.url:http://localhost:5000}")
-    private String emailServiceUrl;
-
-    @Value("${email.service.backupUrl:http://localhost:5000}")
-    private String emailServiceBackupUrl;
-
-    @Value("${email.service.apiKey:}")
-    private String emailServiceApiKey;
+    @Autowired
+    private ReportExcelService reportExcelService;
 
     // Persist a liquidation result record.
     public LiquidationResult createLiquidationResult(LiquidationResult result) {
@@ -105,7 +93,6 @@ public class LiquidationResultService {
     public ReportJobStartResponse startReportJob(
             Long companyId,
             Long projectId,
-            String toEmail,
             String selectedBom,
             String startDate,
             String endDate
@@ -119,16 +106,30 @@ public class LiquidationResultService {
         CompletableFuture.runAsync(() -> {
             try {
                 reportJobService.update(job.getJobId(), 5, "running", "Validando", "Validando os dados do relatório.");
-                transactionTemplate.execute((status) -> {
-                    runLiquidationValidated(resolvedCompanyId, projectId, (progress, stage, message) ->
-                            reportJobService.update(job.getJobId(), progress, "running", stage, message)
-                    );
-                    return null;
-                });
-                sendReportEmailValidated(resolvedCompanyId, projectId, toEmail, selectedBom, startDate, endDate, (progress, stage, message) ->
-                        reportJobService.update(job.getJobId(), progress, "running", stage, message)
+                List<LiquidationResult> results = transactionTemplate.execute((status) ->
+                        runLiquidationValidated(resolvedCompanyId, projectId, (progress, stage, message) ->
+                                reportJobService.update(job.getJobId(), progress, "running", stage, message)
+                        )
                 );
-                reportJobService.complete(job.getJobId(), "Relatório concluído e enviado por email.");
+                if (results == null) {
+                    throw new RuntimeException("Nao foi possivel gerar os dados do relatorio.");
+                }
+                reportJobService.update(job.getJobId(), 88, "running", "Preparando arquivo", "Gerando o arquivo Excel para download.");
+                ReportExcelService.GeneratedReport generatedReport = reportExcelService.buildLiquidationReport(
+                        resolvedCompanyId,
+                        projectId,
+                        selectedBom,
+                        startDate,
+                        endDate,
+                        results
+                );
+                reportJobService.complete(
+                        job.getJobId(),
+                        "Relatório concluído. O download está disponível.",
+                        generatedReport.content(),
+                        generatedReport.filename(),
+                        generatedReport.contentType()
+                );
             } catch (Exception ex) {
                 String message = ex.getMessage() == null || ex.getMessage().isBlank()
                         ? "Não foi possível concluir o relatório."
@@ -144,127 +145,9 @@ public class LiquidationResultService {
         return reportJobService.getJob(jobId, resolvedCompanyId);
     }
 
-    // Send an email report for a company/project, optionally filtered by BOM and date range.
-    public void sendReportEmail(
-            Long companyId,
-            Long projectId,
-            String toEmail,
-            String selectedBom,
-            String startDate,
-            String endDate
-    ) {
+    public ReportJobService.ReportFile getReportJobFile(String jobId, Long companyId) {
         Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
-        sendReportEmailValidated(resolvedCompanyId, projectId, toEmail, selectedBom, startDate, endDate, null);
-    }
-
-    public void sendReportEmail(
-            Long companyId,
-            Long projectId,
-            String toEmail,
-            String selectedBom,
-            String startDate,
-            String endDate,
-            ReportProgressListener progressListener
-    ) {
-        Long resolvedCompanyId = authenticatedUserService.validateAndResolveCompanyId(companyId);
-        sendReportEmailValidated(resolvedCompanyId, projectId, toEmail, selectedBom, startDate, endDate, progressListener);
-    }
-
-    private void sendReportEmailValidated(
-            Long resolvedCompanyId,
-            Long projectId,
-            String toEmail,
-            String selectedBom,
-            String startDate,
-            String endDate,
-            ReportProgressListener progressListener
-    ) {
-        if (resolvedCompanyId == null || projectId == null) {
-            throw new RuntimeException("companyId and projectId are required");
-        }
-        requireProjectInCompany(projectId, resolvedCompanyId);
-        if (toEmail == null || toEmail.trim().isEmpty()) {
-            throw new RuntimeException("Email is required");
-        }
-
-        notifyProgress(progressListener, 88, "Preparando arquivo", "Preparando o relatório para envio.");
-
-        // Validate and serialize optional BOM filter.
-        String bomIdJson = "null";
-        if (selectedBom != null && !selectedBom.trim().isEmpty() && !"all".equalsIgnoreCase(selectedBom.trim())) {
-            String raw = selectedBom.trim();
-            if (raw.matches("\\d+")) {
-                bomIdJson = raw;
-            }
-        }
-
-        // Serialize optional date filters to JSON values.
-        String startJson = (startDate == null || startDate.trim().isEmpty()) ? "null" : "\"" + escapeJson(startDate.trim()) + "\"";
-        String endJson = (endDate == null || endDate.trim().isEmpty()) ? "null" : "\"" + escapeJson(endDate.trim()) + "\"";
-
-        String jsonBody = "{"
-                + "\"to\":\"" + escapeJson(toEmail.trim()) + "\","
-                + "\"companyId\":" + resolvedCompanyId + ","
-                + "\"projectId\":" + projectId + ","
-                + "\"bomId\":" + bomIdJson + ","
-                + "\"startDate\":" + startJson + ","
-                + "\"endDate\":" + endJson + ","
-                + "\"subject\":\"" + escapeJson("Liquidly Report") + "\","
-                + "\"filename\":\"" + escapeJson("liquidly_report.xlsx") + "\""
-                + "}";
-
-        List<String> serviceUrls = new ArrayList<>();
-        if (emailServiceUrl != null && !emailServiceUrl.trim().isEmpty()) {
-            serviceUrls.add(emailServiceUrl.trim());
-        }
-        if (emailServiceBackupUrl != null && !emailServiceBackupUrl.trim().isEmpty()) {
-            String backup = emailServiceBackupUrl.trim();
-            if (serviceUrls.isEmpty() || !backup.equals(serviceUrls.get(0))) {
-                serviceUrls.add(backup);
-            }
-        }
-
-        // Attempt sending through the primary email service and fall back to backup URLs if needed.
-        RuntimeException lastError = null;
-        for (String serviceUrl : serviceUrls) {
-            String endpoint = serviceUrl.endsWith("/")
-                    ? serviceUrl + "send-report"
-                    : serviceUrl + "/send-report";
-
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(endpoint))
-                    .timeout(Duration.ofSeconds(120))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody));
-
-            if (emailServiceApiKey != null && !emailServiceApiKey.trim().isEmpty()) {
-                requestBuilder.header("X-API-Key", emailServiceApiKey.trim());
-            }
-
-            try {
-                notifyProgress(progressListener, 95, "Enviando email", "Enviando o relatório por email.");
-                HttpResponse<String> response = HttpClient.newHttpClient()
-                        .send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-
-                int status = response.statusCode();
-                if (status >= 200 && status < 300) {
-                    notifyProgress(progressListener, 99, "Finalizando", "Finalizando o envio do relatório.");
-                    return;
-                }
-                if (status >= 400 && status < 500) {
-                    throw new RuntimeException("Could not send report");
-                }
-                lastError = new RuntimeException("Could not send report");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                lastError = new RuntimeException("Could not send report");
-            } catch (Exception e) {
-                lastError = new RuntimeException("Could not send report");
-            }
-        }
-
-        if (lastError != null) throw lastError;
-        throw new RuntimeException("Could not send report");
+        return reportJobService.getReportFile(jobId, resolvedCompanyId);
     }
 
     @Transactional
@@ -628,15 +511,5 @@ public class LiquidationResultService {
         if (v.abs().compareTo(new BigDecimal("0.000000001")) < 0) return BigDecimal.ZERO;
         if (v.signum() < 0) return BigDecimal.ZERO;
         return v;
-    }
-
-    private String escapeJson(String value) {
-        if (value == null) return "";
-        return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
     }
 }

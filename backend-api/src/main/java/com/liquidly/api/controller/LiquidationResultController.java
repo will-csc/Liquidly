@@ -5,6 +5,8 @@ import com.liquidly.api.dto.ReportJobStatusResponse;
 import com.liquidly.api.model.LiquidationResult;
 import com.liquidly.api.service.LiquidationResultService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,12 +36,11 @@ public class LiquidationResultController {
         return ResponseEntity.ok(liquidationResultService.runLiquidation(companyId, projectId));
     }
 
-    // Run liquidation and send a report email using the provided payload parameters.
+    // Run liquidation in background and prepare the Excel file for download.
     @PostMapping("/run-report")
     public ResponseEntity<ReportJobStartResponse> runReport(@RequestBody Map<String, Object> payload) {
         Long companyId = payload.get("companyId") == null ? null : Long.valueOf(payload.get("companyId").toString());
         Long projectId = payload.get("projectId") == null ? null : Long.valueOf(payload.get("projectId").toString());
-        String toEmail = payload.get("email") == null ? null : payload.get("email").toString();
         String selectedBom = payload.get("selectedBom") == null ? null : payload.get("selectedBom").toString();
         String startDate = payload.get("startDate") == null ? null : payload.get("startDate").toString();
         String endDate = payload.get("endDate") == null ? null : payload.get("endDate").toString();
@@ -47,7 +48,6 @@ public class LiquidationResultController {
         ReportJobStartResponse response = liquidationResultService.startReportJob(
                 companyId,
                 projectId,
-                toEmail,
                 selectedBom,
                 startDate,
                 endDate
@@ -61,6 +61,18 @@ public class LiquidationResultController {
             @RequestParam Long companyId
     ) {
         return ResponseEntity.ok(liquidationResultService.getReportJobStatus(jobId, companyId));
+    }
+
+    @GetMapping("/run-report/{jobId}/download")
+    public ResponseEntity<byte[]> downloadRunReport(
+            @PathVariable String jobId,
+            @RequestParam Long companyId
+    ) {
+        var reportFile = liquidationResultService.getReportJobFile(jobId, companyId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(reportFile.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + reportFile.fileName() + "\"")
+                .body(reportFile.content());
     }
 
     // Return all liquidation results.

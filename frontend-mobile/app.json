@@ -19,7 +19,8 @@
       "favicon": "./src/assets/images/logo-liquidly.png"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "expo-sharing"
     ]
   }
 }

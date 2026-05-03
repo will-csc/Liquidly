@@ -32,6 +32,8 @@ export interface ReportJobStatusResponse {
   stage: string;
   message: string;
   errorMessage?: string;
+  downloadReady?: boolean;
+  fileName?: string;
   totalSteps: number;
   completedSteps: number;
   remainingSteps: number;

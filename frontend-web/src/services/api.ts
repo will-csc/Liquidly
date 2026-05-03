@@ -17,6 +17,10 @@ import type {
   ReportJobStatusResponse,
 } from '../types';
 
+type RequestConfigWithLoading = InternalAxiosRequestConfig & {
+  skipGlobalLoading?: boolean;
+};
+
 // URL Configuration
 const IS_PROD_BUILD = import.meta.env.MODE === 'production';
 const PROD_URL = import.meta.env.VITE_API_URL_PROD || 'https://liquidly-backend.onrender.com';
@@ -84,8 +88,10 @@ const api: AxiosInstance = axios.create({
 
 // Request Interceptor: Ensure correct Base URL is used
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    loadingBus.start();
+  (config: RequestConfigWithLoading) => {
+    if (!config.skipGlobalLoading) {
+      loadingBus.start();
+    }
     // If fallback is active, force the new URL
     if (config.baseURL !== currentBaseUrl) {
       config.baseURL = currentBaseUrl;
@@ -123,12 +129,17 @@ api.interceptors.request.use(
 // Response Interceptor: Handle errors and manage Failover
 api.interceptors.response.use(
   (response) => {
-    loadingBus.end();
+    const responseConfig = response.config as RequestConfigWithLoading;
+    if (!responseConfig.skipGlobalLoading) {
+      loadingBus.end();
+    }
     return response;
   },
   async (error: AxiosError) => {
-    loadingBus.end();
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as (RequestConfigWithLoading & { _retry?: boolean }) | undefined;
+    if (!originalRequest?.skipGlobalLoading) {
+      loadingBus.end();
+    }
 
     // Check if it's a network/connection error and retry hasn't been attempted yet
     // Only attempt failover if we are currently using PROD_URL
@@ -181,6 +192,25 @@ export const resetApiUrl = () => {
 
 // Function to check which URL is active
 export const getCurrentBaseUrl = () => currentBaseUrl;
+
+const withSilentLoading = <T extends Record<string, unknown>>(config: T): T & { skipGlobalLoading: true } => ({
+  ...config,
+  skipGlobalLoading: true,
+});
+
+const getDownloadFilename = (contentDisposition?: string): string => {
+  if (!contentDisposition) return 'liquidly_report.xlsx';
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+  const basicMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  return basicMatch?.[1] || 'liquidly_report.xlsx';
+};
 
 // --- API Services ---
 
@@ -344,20 +374,41 @@ export const reportService = {
   runReport: async (payload: {
     companyId: number;
     projectId: number;
-    email: string;
     selectedBom: string;
     startDate?: string;
     endDate?: string;
   }): Promise<ReportJobStartResponse> => {
-    const response = await api.post<ReportJobStartResponse>('/api/liquidation-results/run-report', payload, { timeout: 120000 });
+    const response = await api.post<ReportJobStartResponse>(
+      '/api/liquidation-results/run-report',
+      payload,
+      withSilentLoading({ timeout: 120000 })
+    );
     return response.data;
   },
 
+  downloadReport: async (jobId: string, companyId: number): Promise<{ blob: Blob; fileName: string }> => {
+    const response = await api.get(
+      `/api/liquidation-results/run-report/${jobId}/download`,
+      withSilentLoading({
+        params: { companyId },
+        responseType: 'blob' as const,
+        timeout: 120000,
+      })
+    );
+    return {
+      blob: response.data as Blob,
+      fileName: getDownloadFilename(response.headers['content-disposition']),
+    };
+  },
+
   getReportStatus: async (jobId: string, companyId: number): Promise<ReportJobStatusResponse> => {
-    const response = await api.get<ReportJobStatusResponse>(`/api/liquidation-results/run-report/${jobId}/status`, {
-      params: { companyId },
-      timeout: 15000,
-    });
+    const response = await api.get<ReportJobStatusResponse>(
+      `/api/liquidation-results/run-report/${jobId}/status`,
+      withSilentLoading({
+        params: { companyId },
+        timeout: 15000,
+      })
+    );
     return response.data;
   }
 };

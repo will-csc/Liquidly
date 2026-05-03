@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, LoaderCircle, Mail, Play, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, LoaderCircle, Play, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { bomService, invoiceService, poService, projectService, reportService } from "@/services/api";
@@ -134,6 +134,17 @@ const clampDate = (value: string, bounds: { min?: string; max?: string }) => {
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
+const downloadBlob = (blob: Blob, fileName: string) => {
+  const objectUrl = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = fileName || "liquidly_report.xlsx";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+};
+
 const normalizeText = (value?: string | number | null) => String(value ?? "").trim().toLowerCase();
 
 const isBomFromProject = (bom: Bom, project?: Project) => {
@@ -258,6 +269,11 @@ const ReportsForm = () => {
     setEndDate(nextEndDate);
   };
 
+  const downloadGeneratedReport = async (jobId: string, companyId: number, suggestedFileName?: string) => {
+    const { blob, fileName } = await reportService.downloadReport(jobId, companyId);
+    downloadBlob(blob, suggestedFileName || fileName);
+  };
+
   const pollReportProgress = async (jobId: string, companyId: number) => {
     for (let attempt = 0; attempt < 300; attempt += 1) {
       const status = await reportService.getReportStatus(jobId, companyId);
@@ -266,7 +282,16 @@ const ReportsForm = () => {
       setReportProgress(status);
 
       if (status.status === "completed") {
-        showNotice("success", "Relatório concluído", status.message || "O relatório foi gerado com sucesso.");
+        try {
+          await downloadGeneratedReport(jobId, companyId, status.fileName);
+          showNotice("success", "Relatório concluído", status.message || "O relatório foi gerado e baixado com sucesso.");
+        } catch {
+          showNotice(
+            "error",
+            "Relatório concluído sem download",
+            "O relatório foi gerado, mas não foi possível baixar o arquivo Excel automaticamente."
+          );
+        }
         setIsRunning(false);
         return;
       }
@@ -295,9 +320,8 @@ const ReportsForm = () => {
   };
 
   const handleRunReport = async () => {
-    const user = readSessionUser<{ companyId?: number; email?: string }>();
+    const user = readSessionUser<{ companyId?: number }>();
     const companyId = user?.companyId;
-    const email = user?.email;
     const selectedProjectId = Number(selectedProject);
     const bomScope =
       selectedBom === "all"
@@ -324,9 +348,6 @@ const ReportsForm = () => {
 
     if (!companyId) {
       validationErrors.push("Company não encontrado.");
-    }
-    if (!email) {
-      validationErrors.push("Email do usuário não encontrado.");
     }
     if (projectInvoices.length === 0) {
       validationErrors.push("Não existem invoices para o projeto selecionado.");
@@ -358,7 +379,6 @@ const ReportsForm = () => {
     }
 
     const safeCompanyId = companyId as number;
-    const safeEmail = email as string;
     setReportProgress(null);
     setIsRunning(true);
     setNotice(null);
@@ -366,7 +386,6 @@ const ReportsForm = () => {
       const job = await reportService.runReport({
         companyId: safeCompanyId,
         projectId: selectedProjectId,
-        email: safeEmail,
         selectedBom,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
@@ -505,8 +524,8 @@ const ReportsForm = () => {
           {isRunning ? `${t("report.button.running")} ${reportProgress?.progress ?? 0}%` : t("report.button.run")}
         </Button>
         <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-          <Mail className="w-3 h-3" />
-          {t("report.helper.emailSent")}
+          <Download className="w-3 h-3" />
+          {t("report.helper.download")}
         </p>
       </div>
 
