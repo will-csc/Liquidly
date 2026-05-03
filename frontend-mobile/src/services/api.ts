@@ -16,6 +16,7 @@ import {
   ReportJobStatusResponse,
 } from '../types';
 import { userStorage } from './userStorage';
+import { getCurrentLanguage } from '../i18n/i18n';
 
 // URL Configuration
 // Match the same primary backend URL strategy used by the web frontend.
@@ -155,6 +156,13 @@ api.interceptors.request.use(
     cfg.metadata = { start: nowMs(), id: newRequestId() };
     if (config.baseURL !== currentBaseUrl) {
       config.baseURL = currentBaseUrl;
+    }
+    const language = getCurrentLanguage();
+    const baseHeaders = config.headers as any;
+    if (baseHeaders && typeof baseHeaders.set === 'function') {
+      baseHeaders.set('Accept-Language', language);
+    } else if (baseHeaders && typeof baseHeaders === 'object') {
+      baseHeaders['Accept-Language'] = language;
     }
     const token = userStorage.getToken();
     if (token) {
@@ -335,7 +343,10 @@ export const liquidationResultService = {
     );
     const targetFile = `${FileSystem.cacheDirectory || FileSystem.documentDirectory}liquidly-report-${jobId}.xlsx`;
     const result = await FileSystem.downloadAsync(downloadUrl, targetFile, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: {
+        'Accept-Language': getCurrentLanguage(),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     });
     return {
       uri: result.uri,

@@ -1,6 +1,14 @@
 import { createContext, useContext } from "react"
 import type { Language } from "./translations"
 
+let currentLanguage: Language = "pt"
+
+export const getCurrentLanguage = () => currentLanguage
+
+export const setCurrentLanguage = (language: Language) => {
+  currentLanguage = language
+}
+
 export type I18nContextValue = {
   language: Language
   setLanguage: (language: Language) => void

@@ -147,6 +147,187 @@ const downloadBlob = (blob: Blob, fileName: string) => {
 
 const normalizeText = (value?: string | number | null) => String(value ?? "").trim().toLowerCase();
 
+const translateReportStage = (stage: string | undefined, t: (key: string, params?: Record<string, string | number>) => string) => {
+  const normalized = normalizeText(stage);
+
+  if (normalized === "fila" || normalized === "queued") return t("report.progress.stage.queued");
+  if (normalized === "validando" || normalized === "validating") return t("report.progress.stage.validating");
+  if (normalized === "carregando dados" || normalized === "loading data") return t("report.progress.stage.loadingData");
+  if (normalized === "preparando liquidação" || normalized === "preparing liquidation") {
+    return t("report.progress.stage.preparingLiquidation");
+  }
+  if (normalized === "processando liquidação" || normalized === "processing liquidation") {
+    return t("report.progress.stage.processingLiquidation");
+  }
+  if (normalized === "salvando dados" || normalized === "saving data") return t("report.progress.stage.savingData");
+  if (normalized === "persistindo relatório" || normalized === "persisting report") {
+    return t("report.progress.stage.persistingReport");
+  }
+  if (normalized === "preparando arquivo" || normalized === "preparing file") {
+    return t("report.progress.stage.preparingFile");
+  }
+  if (normalized === "concluido" || normalized === "concluído" || normalized === "completed") {
+    return t("report.progress.stage.completed");
+  }
+  if (normalized === "falha" || normalized === "failed") return t("report.progress.stage.failed");
+
+  return stage || "";
+};
+
+const translateReportMessage = (
+  message: string | undefined,
+  t: (key: string, params?: Record<string, string | number>) => string
+) => {
+  const raw = String(message ?? "").trim();
+  const normalized = normalizeText(raw);
+
+  if (!raw) return "";
+
+  const processingMatch =
+    raw.match(/^Processando itens da BOM \((\d+) de (\d+)\)\.?$/i) ??
+    raw.match(/^Processing BOM items \((\d+) of (\d+)\)\.?$/i);
+
+  if (processingMatch) {
+    return t("report.progress.message.processingItems", {
+      current: processingMatch[1],
+      total: processingMatch[2],
+    });
+  }
+
+  if (
+    normalized === "relatório entrou na fila de processamento." ||
+    normalized === "report queued for processing."
+  ) {
+    return t("report.progress.message.queued");
+  }
+  if (
+    normalized === "validando os dados do relatório." ||
+    normalized === "validating report data."
+  ) {
+    return t("report.progress.message.validating");
+  }
+  if (
+    normalized === "carregando bom, invoices e pos." ||
+    normalized === "loading bom, invoices and pos."
+  ) {
+    return t("report.progress.message.loadingData");
+  }
+  if (
+    normalized === "preparando os dados para processar a liquidação." ||
+    normalized === "preparing data to process liquidation."
+  ) {
+    return t("report.progress.message.preparingLiquidation");
+  }
+  if (
+    normalized === "salvando os resultados e saldos processados." ||
+    normalized === "saving processed balances and results."
+  ) {
+    return t("report.progress.message.savingData");
+  }
+  if (
+    normalized === "persistindo os resultados finais do relatório." ||
+    normalized === "persisting final report results."
+  ) {
+    return t("report.progress.message.persistingReport");
+  }
+  if (
+    normalized === "gerando o arquivo excel para download." ||
+    normalized === "generating excel file for download."
+  ) {
+    return t("report.progress.message.preparingFile");
+  }
+  if (
+    normalized === "relatório concluído. o download está disponível." ||
+    normalized === "report completed. download is available."
+  ) {
+    return t("report.progress.message.completed");
+  }
+  if (
+    normalized === "o relatório não pôde ser concluído." ||
+    normalized === "the report could not be completed."
+  ) {
+    return t("report.notice.failed");
+  }
+
+  return raw;
+};
+
+const translateReportError = (message: string | undefined, t: (key: string, params?: Record<string, string | number>) => string) => {
+  const raw = String(message ?? "").trim();
+  const normalized = normalizeText(raw);
+
+  if (!raw) return t("report.notice.failed");
+
+  if (
+    normalized === "companyid and projectid are required" ||
+    normalized === "companyid e projectid são obrigatórios"
+  ) {
+    return t("report.validation.companyAndProjectRequired");
+  }
+  if (
+    normalized === "cannot run report without nfs for the selected project" ||
+    normalized === "não é possível executar o relatório sem nfs para o projeto selecionado"
+  ) {
+    return t("report.validation.noProjectInvoices");
+  }
+  if (
+    normalized === "cannot run report without pos for the company" ||
+    normalized === "não é possível executar o relatório sem pos para a empresa"
+  ) {
+    return t("report.validation.noCompanyPos");
+  }
+  if (
+    normalized === "cannot run report without bom data for the selected project" ||
+    normalized === "não é possível executar o relatório sem dados de bom para o projeto selecionado"
+  ) {
+    return t("report.validation.noBomItems");
+  }
+  if (
+    normalized === "report job not found" ||
+    normalized === "job do relatório não encontrado"
+  ) {
+    return t("report.error.jobNotFound");
+  }
+  if (
+    normalized === "report file not ready" ||
+    normalized === "arquivo do relatório ainda não está pronto"
+  ) {
+    return t("report.error.fileNotReady");
+  }
+  if (
+    normalized === "authenticated user not found" ||
+    normalized === "usuário autenticado não encontrado"
+  ) {
+    return t("report.error.loginRequired");
+  }
+  if (
+    normalized === "authenticated user does not have a company" ||
+    normalized === "o usuário autenticado não possui empresa"
+  ) {
+    return t("report.validation.noCompany");
+  }
+  if (
+    normalized === "you cannot access data from another company" ||
+    normalized === "você não pode acessar dados de outra empresa"
+  ) {
+    return t("report.error.forbiddenCompany");
+  }
+  if (
+    normalized === "não foi possível gerar o arquivo excel do relatório." ||
+    normalized === "could not generate the report excel file."
+  ) {
+    return t("report.error.excelGenerationFailed");
+  }
+  if (
+    normalized === "não foi possível gerar os dados do relatório." ||
+    normalized === "could not generate the report data."
+  ) {
+    return t("report.error.dataGenerationFailed");
+  }
+
+  return raw;
+};
+
 const isBomFromProject = (bom: Bom, project?: Project) => {
   if (!project?.id) return true;
   if (bom.project?.id != null) return bom.project.id === project.id;
@@ -231,6 +412,7 @@ const ReportsForm = () => {
         }
       } catch (error) {
         console.error("Failed to fetch report data", error);
+        showNotice("error", t("report.notice.loadFailedTitle"), t("report.notice.loadFailedMessage"));
       }
     };
     void fetchData();
@@ -284,12 +466,16 @@ const ReportsForm = () => {
       if (status.status === "completed") {
         try {
           await downloadGeneratedReport(jobId, companyId, status.fileName);
-          showNotice("success", "Relatório concluído", status.message || "O relatório foi gerado e baixado com sucesso.");
+          showNotice(
+            "success",
+            t("report.notice.completedTitle"),
+            translateReportMessage(status.message, t) || t("report.notice.success")
+          );
         } catch {
           showNotice(
             "error",
-            "Relatório concluído sem download",
-            "O relatório foi gerado, mas não foi possível baixar o arquivo Excel automaticamente."
+            t("report.notice.completedNoDownloadTitle"),
+            t("report.notice.completedNoDownloadMessage")
           );
         }
         setIsRunning(false);
@@ -299,8 +485,8 @@ const ReportsForm = () => {
       if (status.status === "failed") {
         showNotice(
           "error",
-          "Falha ao executar relatório",
-          status.errorMessage || status.message || "O backend não conseguiu concluir o relatório."
+          t("report.notice.runFailedTitle"),
+          translateReportError(status.errorMessage || status.message, t)
         );
         setIsRunning(false);
         return;
@@ -312,8 +498,8 @@ const ReportsForm = () => {
     if (isMountedRef.current) {
       showNotice(
         "error",
-        "Tempo de processamento excedido",
-        "O relatório demorou mais do que o esperado para responder. Tente novamente em instantes."
+        t("report.notice.timeoutTitle"),
+        t("report.notice.timeoutMessage")
       );
       setIsRunning(false);
     }
@@ -331,29 +517,29 @@ const ReportsForm = () => {
     const validationErrors: string[] = [];
 
     if (startDate && endDate && startDate > endDate) {
-      validationErrors.push("A data inicial deve ser menor ou igual à data final.");
+      validationErrors.push(t("report.validation.startBeforeEnd"));
     }
     if (!selectedProject) {
-      validationErrors.push("Selecione um projeto.");
+      validationErrors.push(t("report.validation.selectProject"));
     }
     if (!selectedBom) {
-      validationErrors.push("Selecione os itens da BOM.");
+      validationErrors.push(t("report.validation.selectBom"));
     }
     if (!startDate || !endDate) {
-      validationErrors.push("Preencha o período inicial e final.");
+      validationErrors.push(t("report.validation.fillPeriod"));
     }
     if (invoices.length === 0) {
-      validationErrors.push("Não existem invoices cadastradas para a empresa.");
+      validationErrors.push(t("report.validation.noCompanyInvoices"));
     }
 
     if (!companyId) {
-      validationErrors.push("Company não encontrado.");
+      validationErrors.push(t("report.validation.noCompany"));
     }
     if (projectInvoices.length === 0) {
-      validationErrors.push("Não existem invoices para o projeto selecionado.");
+      validationErrors.push(t("report.validation.noProjectInvoices"));
     }
     if (bomScope.length === 0) {
-      validationErrors.push("Não existem itens de BOM para o projeto selecionado.");
+      validationErrors.push(t("report.validation.noBomItems"));
     }
 
     const poItemCodes = new Set(pos.map((poItem) => normalizeText(poItem.itemCode)).filter(Boolean));
@@ -364,15 +550,18 @@ const ReportsForm = () => {
         .slice(0, 5)
         .map((bom) => bom.itemCode)
         .join(", ");
-      const suffix = missingPoItems.length > 5 ? "..." : "";
-      validationErrors.push(`Existem itens da BOM sem PO cadastrado na empresa: ${preview}${suffix}`);
+      validationErrors.push(
+        t("report.validation.missingPoItems", {
+          items: `${preview}${missingPoItems.length > 5 ? "..." : ""}`,
+        })
+      );
     }
 
     if (validationErrors.length > 0) {
       showNotice(
         "error",
-        "Não foi possível iniciar o relatório",
-        "Corrija os pontos abaixo antes de continuar.",
+        t("report.notice.validationTitle"),
+        t("report.notice.validationMessage"),
         validationErrors
       );
       return;
@@ -398,8 +587,8 @@ const ReportsForm = () => {
     } catch (err: unknown) {
       type ErrorWithResponse = { response?: { data?: { message?: string } } };
       const maybe = err as ErrorWithResponse;
-      const message = maybe?.response?.data?.message || t("report.notice.failed");
-      showNotice("error", "Falha ao iniciar relatório", message);
+      const message = translateReportError(maybe?.response?.data?.message, t);
+      showNotice("error", t("report.notice.startFailedTitle"), message);
       setIsRunning(false);
     } finally {
       if (!isMountedRef.current) return;
@@ -473,9 +662,9 @@ const ReportsForm = () => {
         <div className="rounded-2xl border border-border/60 bg-secondary/30 p-4 shadow-card">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-sm font-semibold text-foreground">Acompanhamento do relatório</div>
+              <div className="text-sm font-semibold text-foreground">{t("report.progress.title")}</div>
               <div className="text-xs text-muted-foreground mt-1">
-                {reportProgress.stage} · {reportProgress.message}
+                {translateReportStage(reportProgress.stage, t)} · {translateReportMessage(reportProgress.message, t)}
               </div>
             </div>
             <div
@@ -501,14 +690,14 @@ const ReportsForm = () => {
           </div>
 
           <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>Concluído: {reportProgress.completedSteps}%</span>
-            <span>Falta: {remainingPercent}%</span>
-            <span>Etapas restantes: {reportProgress.remainingSteps}</span>
+            <span>{t("report.progress.completed", { value: reportProgress.completedSteps })}</span>
+            <span>{t("report.progress.remaining", { value: remainingPercent })}</span>
+            <span>{t("report.progress.remainingSteps", { value: reportProgress.remainingSteps })}</span>
           </div>
 
           {reportProgress.errorMessage && (
             <div className="mt-3 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              {reportProgress.errorMessage}
+              {translateReportError(reportProgress.errorMessage, t)}
             </div>
           )}
         </div>

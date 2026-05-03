@@ -58,6 +58,18 @@ public class GlobalExceptionHandler {
             status = HttpStatus.BAD_REQUEST;
             code = "RECOVERY_CODE_REQUIRED";
             messageKey = "error.recovery.code_required";
+        } else if (msg.contains("Authenticated user not found")) {
+            status = HttpStatus.UNAUTHORIZED;
+            code = "AUTHENTICATED_USER_NOT_FOUND";
+            messageKey = "error.auth.user_not_found";
+        } else if (msg.contains("Authenticated user does not have a company")) {
+            status = HttpStatus.FORBIDDEN;
+            code = "AUTHENTICATED_USER_COMPANY_REQUIRED";
+            messageKey = "error.auth.company_required";
+        } else if (msg.contains("You cannot access data from another company")) {
+            status = HttpStatus.FORBIDDEN;
+            code = "AUTHENTICATED_USER_COMPANY_FORBIDDEN";
+            messageKey = "error.auth.company_forbidden";
         } else if (msg.contains("New password is required")) {
             status = HttpStatus.BAD_REQUEST;
             code = "NEW_PASSWORD_REQUIRED";
@@ -109,7 +121,39 @@ public class GlobalExceptionHandler {
         } else if (msg.contains("Report job not found")) {
             status = HttpStatus.NOT_FOUND;
             code = "REPORT_JOB_NOT_FOUND";
-            messageKey = "error.internal";
+            messageKey = "error.report.job_not_found";
+        } else if (msg.contains("Report file not ready")) {
+            status = HttpStatus.CONFLICT;
+            code = "REPORT_FILE_NOT_READY";
+            messageKey = "error.report.file_not_ready";
+        } else if (msg.contains("companyId and projectId are required")) {
+            status = HttpStatus.BAD_REQUEST;
+            code = "REPORT_REQUIRED_FIELDS";
+            messageKey = "error.report.required_fields";
+        } else if (msg.contains("Project not found with id")) {
+            status = HttpStatus.NOT_FOUND;
+            code = "REPORT_PROJECT_NOT_FOUND";
+            messageKey = "error.report.project_not_found";
+        } else if (msg.contains("Cannot run report without NFs for the selected project")) {
+            status = HttpStatus.BAD_REQUEST;
+            code = "REPORT_NO_INVOICES";
+            messageKey = "error.report.no_invoices";
+        } else if (msg.contains("Cannot run report without POs for the company")) {
+            status = HttpStatus.BAD_REQUEST;
+            code = "REPORT_NO_POS";
+            messageKey = "error.report.no_pos";
+        } else if (msg.contains("Cannot run report without BOM data for the selected project")) {
+            status = HttpStatus.BAD_REQUEST;
+            code = "REPORT_NO_BOM";
+            messageKey = "error.report.no_bom";
+        } else if (msg.contains("Nao foi possivel gerar o arquivo Excel do relatorio.")) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+            code = "REPORT_EXCEL_GENERATION_FAILED";
+            messageKey = "error.report.excel_generation_failed";
+        } else if (msg.contains("Nao foi possivel gerar os dados do relatorio.")) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+            code = "REPORT_DATA_GENERATION_FAILED";
+            messageKey = "error.report.data_generation_failed";
         } else if (msg.contains("not found")) {
             status = HttpStatus.NOT_FOUND;
             code = "NOT_FOUND";

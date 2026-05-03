@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import React, { useEffect, useMemo, useState } from "react"
-import { I18nContext, type I18nContextValue } from "./i18n"
+import { I18nContext, setCurrentLanguage, type I18nContextValue } from "./i18n"
 import { translations, type Language } from "./translations"
 
 const STORAGE_KEY = "liquidly.language"
@@ -22,7 +22,10 @@ export const I18nProvider = ({ children }: { children: React.ReactNode }) => {
     ;(async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY)
-        if (isLanguage(stored)) setLanguageState(stored)
+        if (isLanguage(stored)) {
+          setLanguageState(stored)
+          setCurrentLanguage(stored)
+        }
       } catch {
         return
       }
@@ -32,6 +35,7 @@ export const I18nProvider = ({ children }: { children: React.ReactNode }) => {
   const value = useMemo<I18nContextValue>(() => {
     const setLanguage = (next: Language) => {
       setLanguageState(next)
+      setCurrentLanguage(next)
       void AsyncStorage.setItem(STORAGE_KEY, next)
     }
 
@@ -41,6 +45,10 @@ export const I18nProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     return { language, setLanguage, t }
+  }, [language])
+
+  useEffect(() => {
+    setCurrentLanguage(language)
   }, [language])
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
