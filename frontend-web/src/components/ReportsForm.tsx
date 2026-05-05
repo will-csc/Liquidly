@@ -636,6 +636,7 @@ const ReportsForm = () => {
       </Section>
       <div className="h-px bg-border" />
       <Section title={t("report.section.dateRange")}>
+        <p className="text-sm text-muted-foreground">{t("report.section.dateRangeDescription")}</p>
         <FieldRow
           label={t("report.label.startDate")}
           placeholder="dd/mm/yyyy"

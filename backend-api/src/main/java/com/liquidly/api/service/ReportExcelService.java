@@ -3,6 +3,7 @@ package com.liquidly.api.service;
 import com.liquidly.api.model.Bom;
 import com.liquidly.api.model.LiquidationResult;
 import com.liquidly.api.repository.BomRepository;
+import com.liquidly.api.repository.ProjectRepository;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
@@ -55,6 +56,9 @@ public class ReportExcelService {
     @Autowired
     private BomRepository bomRepository;
 
+    @Autowired
+    private ProjectRepository projectRepository;
+
     public GeneratedReport buildLiquidationReport(
             Long companyId,
             Long projectId,
@@ -83,7 +87,7 @@ public class ReportExcelService {
 
             return new GeneratedReport(
                     output.toByteArray(),
-                    buildFilename(projectId, itemCodeFilter),
+                    buildFilename(companyId, projectId, itemCodeFilter, endDate, startDate),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             );
         } catch (IOException ex) {
@@ -239,20 +243,45 @@ public class ReportExcelService {
         }
     }
 
-    private String buildFilename(Long projectId, String itemCodeFilter) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        String projectPart = projectId == null ? "project" : "project_" + projectId;
-        String itemPart = itemCodeFilter == null || itemCodeFilter.isBlank()
-                ? "all_items"
-                : normalizeFilename(itemCodeFilter);
-        return "liquidly_report_" + projectPart + "_" + itemPart + "_" + timestamp + ".xlsx";
+    private String buildFilename(Long companyId, Long projectId, String itemCodeFilter, String endDate, String startDate) {
+        String projectPart = sanitizeFilenamePart(resolveProjectName(companyId, projectId));
+        String itemPart = sanitizeFilenamePart(
+                itemCodeFilter == null || itemCodeFilter.isBlank() ? "Todos os Itens" : itemCodeFilter
+        );
+        String datePart = sanitizeFilenamePart(formatMonthYear(endDate, startDate));
+        return projectPart + " - " + itemPart + " - " + datePart + ".xlsx";
     }
 
-    private String normalizeFilename(String value) {
+    private String resolveProjectName(Long companyId, Long projectId) {
+        if (projectId == null || companyId == null) {
+            return "Projeto";
+        }
+        return projectRepository.findByIdAndCompanyId(projectId, companyId)
+                .map(project -> {
+                    String name = project.getName();
+                    return name == null || name.trim().isEmpty() ? "Projeto" : name.trim();
+                })
+                .orElse("Projeto");
+    }
+
+    private String formatMonthYear(String primaryDate, String fallbackDate) {
+        LocalDate referenceDate = parseDate(primaryDate);
+        if (referenceDate == null) {
+            referenceDate = parseDate(fallbackDate);
+        }
+        if (referenceDate == null) {
+            referenceDate = LocalDate.now();
+        }
+
+        String formatted = referenceDate.format(DateTimeFormatter.ofPattern("MMMM.yyyy", new Locale("pt", "BR")));
+        return formatted.substring(0, 1).toUpperCase(new Locale("pt", "BR")) + formatted.substring(1);
+    }
+
+    private String sanitizeFilenamePart(String value) {
         return value
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", "_")
-                .replaceAll("^_+|_+$", "");
+                .replaceAll("[\\\\/:*?\"<>|]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private String normalize(String value) {

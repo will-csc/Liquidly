@@ -247,6 +247,7 @@ const Report = () => {
           <View style={styles.divider} />
 
           <Text style={styles.sectionTitle}>{t('report.section.dateRange')}</Text>
+          <Text style={styles.sectionDescription}>{t('report.section.dateRangeDescription')}</Text>
           <Input
             label={t('report.label.startDate')}
             placeholder="DD/MM/YYYY"
@@ -331,6 +332,11 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginBottom: 10,
     marginTop: 10,
+  },
+  sectionDescription: {
+    fontSize: 13,
+    color: theme.colors.textLight,
+    marginBottom: 12,
   },
   divider: {
     height: 1,

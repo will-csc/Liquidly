@@ -1,5 +1,5 @@
 -- Remove todos os resultados já gerados do relatório/liquidação
-DELETE FROM liquidation_results WHERE ID > 0;
+DELETE FROM liquidation_results WHERE id > 0;
 
 -- Restaura o saldo da PO para o valor original da quantidade da PO
 UPDATE pos
