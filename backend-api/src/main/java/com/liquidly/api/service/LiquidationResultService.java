@@ -249,20 +249,60 @@ public class LiquidationResultService {
                     continue;
                 }
 
-                BigDecimal supplyBom = invRemaining.multiply(factor);
-                BigDecimal consumedBom = min(bomRemaining, supplyBom);
-                BigDecimal consumedInv = safeDivide(consumedBom, factor);
+                while (bomRemaining.signum() > 0 && invRemaining.signum() > 0) {
+                    BigDecimal supplyBom = invRemaining.multiply(factor);
+                    if (supplyBom.signum() <= 0) {
+                        break;
+                    }
 
-                bomRemaining = clampZero(smartRound(bomRemaining.subtract(consumedBom)));
-                invRemaining = clampZero(smartRound(invRemaining.subtract(consumedInv)));
+                    PoAllocation poAllocation = findMatchingPoAllocation(resolvedCompanyId, bom, pos);
+                    BigDecimal consumedBom = min(bomRemaining, supplyBom);
+                    if (poAllocation != null) {
+                        consumedBom = min(consumedBom, poAllocation.supplyBom());
+                    }
 
-                consumedBom = smartRound(consumedBom);
-                consumedInv = smartRound(consumedInv);
+                    if (consumedBom.signum() <= 0) {
+                        break;
+                    }
 
-                bom.setRemainingQntd(bomRemaining);
-                inv.setRemainingQntd(invRemaining);
+                    BigDecimal consumedInv = safeDivide(consumedBom, factor);
+                    BigDecimal nextBomRemaining = clampZero(smartRound(bomRemaining.subtract(consumedBom)));
+                    BigDecimal nextInvRemaining = clampZero(smartRound(invRemaining.subtract(consumedInv)));
 
-                results.add(buildResult(resolvedCompanyId, projectId, fallbackProjectName, bom, bomRemaining, inv, invRemaining, consumedBom, consumedInv, null, BigDecimal.ZERO, BigDecimal.ZERO));
+                    consumedBom = smartRound(consumedBom);
+                    consumedInv = smartRound(consumedInv);
+
+                    bomRemaining = nextBomRemaining;
+                    invRemaining = nextInvRemaining;
+                    bom.setRemainingQntd(bomRemaining);
+                    inv.setRemainingQntd(invRemaining);
+
+                    Po matchedPo = null;
+                    BigDecimal poRemaining = BigDecimal.ZERO;
+                    BigDecimal consumedPo = BigDecimal.ZERO;
+
+                    if (poAllocation != null) {
+                        matchedPo = poAllocation.po();
+                        consumedPo = smartRound(safeDivide(consumedBom, poAllocation.factor()));
+                        poRemaining = clampZero(smartRound(poAllocation.remaining().subtract(consumedPo)));
+                        matchedPo.setRemainingQntd(poRemaining);
+                    }
+
+                    results.add(buildResult(
+                            resolvedCompanyId,
+                            projectId,
+                            fallbackProjectName,
+                            bom,
+                            bomRemaining,
+                            inv,
+                            invRemaining,
+                            consumedBom,
+                            consumedInv,
+                            matchedPo,
+                            poRemaining,
+                            consumedPo
+                    ));
+                }
 
                 if (bomRemaining.signum() <= 0) break;
             }
@@ -329,6 +369,24 @@ public class LiquidationResultService {
         int progress = 20 + (int) Math.round((completedItems * 60.0) / Math.max(1, totalItems));
         String message = String.format("Processando itens da BOM (%d de %d).", completedItems, totalItems);
         notifyProgress(progressListener, progress, "Processando liquidação", message);
+    }
+
+    private PoAllocation findMatchingPoAllocation(Long companyId, Bom bom, List<Po> pos) {
+        String bomItemCode = normalize(bom.getItemCode());
+        for (Po po : pos) {
+            BigDecimal poRemaining = nz(po.getRemainingQntd());
+            if (poRemaining.signum() <= 0) continue;
+            if (!bomItemCode.equals(normalize(po.getItemCode()))) continue;
+
+            BigDecimal factor = getFactor(companyId, bom.getItemCode(), po.getUmPo(), bom.getUmBom());
+            if (factor == null || factor.signum() == 0) continue;
+
+            BigDecimal supplyBom = poRemaining.multiply(factor);
+            if (supplyBom.signum() <= 0) continue;
+
+            return new PoAllocation(po, factor, poRemaining, supplyBom);
+        }
+        return null;
     }
 
     private void notifyProgress(ReportProgressListener progressListener, int progress, String stage, String message) {
@@ -478,6 +536,9 @@ public class LiquidationResultService {
     private BigDecimal moneyRound(BigDecimal v) {
         if (v == null) return BigDecimal.ZERO;
         return v.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private record PoAllocation(Po po, BigDecimal factor, BigDecimal remaining, BigDecimal supplyBom) {
     }
 
     private BigDecimal nz(BigDecimal v) {
