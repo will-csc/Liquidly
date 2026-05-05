@@ -210,6 +210,22 @@ public class ReportExcelService {
         }
 
         String trimmed = value.trim();
+        if (trimmed.matches("^\\d{4}-\\d{2}-\\d{2}.*$")) {
+            try {
+                return LocalDate.parse(trimmed.substring(0, 10));
+            } catch (Exception ignored) {
+                // continue
+            }
+        }
+
+        if (trimmed.matches("^\\d{2}/\\d{2}/\\d{4}.*$")) {
+            try {
+                return LocalDate.parse(trimmed.substring(0, 10), DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            } catch (Exception ignored) {
+                // continue
+            }
+        }
+
         try {
             return LocalDate.parse(trimmed);
         } catch (Exception ignored) {

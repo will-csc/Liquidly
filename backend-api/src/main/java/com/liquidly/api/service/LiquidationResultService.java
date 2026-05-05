@@ -311,7 +311,8 @@ public class LiquidationResultService {
         if (!pos.isEmpty()) poRepository.saveAll(pos);
 
         notifyProgress(progressListener, 86, "Persistindo relatório", "Persistindo os resultados finais do relatório.");
-        return liquidationResultRepository.saveAll(results);
+        liquidationResultRepository.saveAllAndFlush(results);
+        return liquidationResultRepository.findByCompanyIdAndProjectIdOrderByIdAsc(resolvedCompanyId, projectId);
     }
 
     public LiquidationResult getLiquidationResultByIdForCompany(Long id, Long companyId) {

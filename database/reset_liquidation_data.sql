@@ -1,7 +1,5 @@
-BEGIN;
-
 -- Remove todos os resultados já gerados do relatório/liquidação
-DELETE FROM liquidation_results;
+DELETE FROM liquidation_results WHERE ID > 0;
 
 -- Restaura o saldo da PO para o valor original da quantidade da PO
 UPDATE pos
@@ -15,4 +13,3 @@ SET remaining_qntd = qntd_invoice;
 UPDATE boms
 SET remaining_qntd = qntd;
 
-COMMIT;
