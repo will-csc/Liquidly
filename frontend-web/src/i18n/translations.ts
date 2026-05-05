@@ -52,6 +52,7 @@ export const translations: Record<Language, Translations> = {
     "signup.visualText": "We are here to help you!",
     "signup.faceAlreadyRegistered": "This face is already registered. Use Face Login or take another photo.",
     "signup.faceCheckFailed": "Could not verify if this face is already registered. Please try again.",
+    "signup.fakeDataHint": "It does not need to be real information",
 
     "forgot.title": "Reset your password",
     "forgot.sendCode": "Send Code",
@@ -228,6 +229,7 @@ export const translations: Record<Language, Translations> = {
     "signup.visualText": "Estamos aqui para te ajudar!",
     "signup.faceAlreadyRegistered": "Este rosto já está cadastrado. Use Login com Face ou tire outra foto.",
     "signup.faceCheckFailed": "Não foi possível verificar se este rosto já está cadastrado. Tente novamente.",
+    "signup.fakeDataHint": "Não precisa ser um dado verdadeiro",
 
     "forgot.title": "Redefinir senha",
     "forgot.sendCode": "Enviar código",
@@ -404,6 +406,7 @@ export const translations: Record<Language, Translations> = {
     "signup.visualText": "¡Estamos aquí para ayudarte!",
     "signup.faceAlreadyRegistered": "Este rostro ya está registrado. Usa el inicio con rostro o toma otra foto.",
     "signup.faceCheckFailed": "No se pudo verificar si este rostro ya está registrado. Intenta nuevamente.",
+    "signup.fakeDataHint": "No tiene que ser un dato real",
 
     "forgot.title": "Restablecer contraseña",
     "forgot.sendCode": "Enviar código",

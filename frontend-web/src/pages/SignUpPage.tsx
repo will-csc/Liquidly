@@ -211,6 +211,7 @@ const SignUpPage: React.FC = () => {
 
             <Input
               label={t("common.email")}
+              helperText={t("signup.fakeDataHint")}
               id="email"
               type="email"
               name="email"
@@ -221,6 +222,7 @@ const SignUpPage: React.FC = () => {
 
             <Input
               label={t("common.company")}
+              helperText={t("signup.fakeDataHint")}
               id="company"
               type="text"
               name="company"

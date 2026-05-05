@@ -5,9 +5,10 @@ import { Eye, EyeOff } from 'lucide-react';
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   id: string;
+  helperText?: string;
 }
 
-const Input: React.FC<InputProps> = ({ label, id, className = '', type, ...props }) => {
+const Input: React.FC<InputProps> = ({ label, id, helperText, className = '', type, ...props }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
 
@@ -18,6 +19,11 @@ const Input: React.FC<InputProps> = ({ label, id, className = '', type, ...props
   return (
     <div className={`form-group ${className}`}>
       <label htmlFor={id}>{label}</label>
+      {helperText ? (
+        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '-0.35rem', marginBottom: '0.45rem' }}>
+          {helperText}
+        </div>
+      ) : null}
       <div className="input-wrapper">
         <input
           id={id}

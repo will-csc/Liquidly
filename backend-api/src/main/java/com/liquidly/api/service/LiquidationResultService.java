@@ -307,40 +307,6 @@ public class LiquidationResultService {
                 if (bomRemaining.signum() <= 0) break;
             }
 
-            if (bomRemaining.signum() <= 0) {
-                notifyLiquidationProgress(progressListener, bomIndex + 1, totalBoms);
-                continue;
-            }
-
-            for (Po po : pos) {
-                BigDecimal poRemaining = nz(po.getRemainingQntd());
-                if (poRemaining.signum() <= 0) continue;
-                if (!bomItemCode.equals(normalize(po.getItemCode()))) continue;
-
-                // Convert PO UM -> BOM UM using the latest conversion factor for the item.
-                BigDecimal factor = getFactor(resolvedCompanyId, bom.getItemCode(), po.getUmPo(), bom.getUmBom());
-                if (factor == null || factor.signum() == 0) {
-                    results.add(buildResult(resolvedCompanyId, projectId, fallbackProjectName, bom, bomRemaining, null, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, po, poRemaining, BigDecimal.ZERO));
-                    continue;
-                }
-
-                BigDecimal supplyBom = poRemaining.multiply(factor);
-                BigDecimal consumedBom = min(bomRemaining, supplyBom);
-                BigDecimal consumedPo = safeDivide(consumedBom, factor);
-
-                bomRemaining = clampZero(smartRound(bomRemaining.subtract(consumedBom)));
-                poRemaining = clampZero(smartRound(poRemaining.subtract(consumedPo)));
-
-                consumedBom = smartRound(consumedBom);
-                consumedPo = smartRound(consumedPo);
-
-                bom.setRemainingQntd(bomRemaining);
-                po.setRemainingQntd(poRemaining);
-
-                results.add(buildResult(resolvedCompanyId, projectId, fallbackProjectName, bom, bomRemaining, null, BigDecimal.ZERO, consumedBom, BigDecimal.ZERO, po, poRemaining, consumedPo));
-
-                if (bomRemaining.signum() <= 0) break;
-            }
             notifyLiquidationProgress(progressListener, bomIndex + 1, totalBoms);
         }
 
