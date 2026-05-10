@@ -29,6 +29,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import SelectableListItem from '../components/SelectableListItem';
 
 const screenWidth = Dimensions.get('window').width;
+const isCompactActionsLayout = screenWidth < 390;
 
 const Dashboard = () => {
   const navigation: any = useNavigation();
@@ -205,16 +206,25 @@ const Dashboard = () => {
         <View style={styles.headerActions}>
           <TouchableOpacity
             onPress={() => setLanguageModalVisible(true)}
-            style={[styles.actionButton, styles.languageButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+            style={[
+              styles.actionButton,
+              isCompactActionsLayout ? styles.actionButtonCompact : null,
+              styles.languageButton,
+              isDeletingAccount ? styles.actionButtonDisabled : null,
+            ]}
             disabled={isDeletingAccount}
           >
             <View style={styles.actionContent}>
               <View style={[styles.actionIconWrap, styles.languageIconWrap]}>
                 <Ionicons name="language-outline" size={16} color={theme.colors.primary} />
               </View>
-              <Text style={styles.compactActionLabel}>{t('language.title')}</Text>
+              <Text style={styles.compactActionLabel} numberOfLines={2}>
+                {t('language.title')}
+              </Text>
             </View>
-            <Text style={styles.compactActionValue}>{currentLanguageLabel}</Text>
+            <Text style={styles.compactActionValue} numberOfLines={1}>
+              {currentLanguageLabel}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -228,16 +238,23 @@ const Dashboard = () => {
               setPendingDeleteUserId(user.id);
               setDeleteModalVisible(true);
             }}
-            style={[styles.actionButton, styles.deleteButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+            style={[
+              styles.actionButton,
+              isCompactActionsLayout ? styles.actionButtonCompact : null,
+              styles.deleteButton,
+              isDeletingAccount ? styles.actionButtonDisabled : null,
+            ]}
             disabled={isDeletingAccount}
           >
             <View style={styles.actionContent}>
               <View style={[styles.actionIconWrap, styles.deleteIconWrap]}>
                 <Ionicons name="trash-outline" size={16} color="#d92d20" />
               </View>
-              <Text style={styles.compactActionLabel}>{t('dashboard.deleteAccount')}</Text>
+              <Text style={styles.compactActionLabel} numberOfLines={2}>
+                {t('dashboard.deleteAccount')}
+              </Text>
             </View>
-            <Text style={styles.compactActionValue}>
+            <Text style={styles.compactActionValue} numberOfLines={1}>
               {isDeletingAccount ? t('dashboard.deleting') : t('common.delete')}
             </Text>
           </TouchableOpacity>
@@ -248,16 +265,25 @@ const Dashboard = () => {
               await userStorage.clearUser();
               goToEntry();
             }}
-            style={[styles.actionButton, styles.logoutButton, isDeletingAccount ? styles.actionButtonDisabled : null]}
+            style={[
+              styles.actionButton,
+              isCompactActionsLayout ? styles.actionButtonCompact : null,
+              styles.logoutButton,
+              isDeletingAccount ? styles.actionButtonDisabled : null,
+            ]}
             disabled={isDeletingAccount}
           >
             <View style={styles.actionContent}>
               <View style={[styles.actionIconWrap, styles.logoutIconWrap]}>
                 <Ionicons name="log-out-outline" size={16} color={theme.colors.primary} />
               </View>
-              <Text style={styles.compactActionLabel}>{t('dashboard.logout')}</Text>
+              <Text style={styles.compactActionLabel} numberOfLines={2}>
+                {t('dashboard.logout')}
+              </Text>
             </View>
-            <Text style={styles.compactActionValue}>{t('dashboard.logout')}</Text>
+            <Text style={styles.compactActionValue} numberOfLines={1}>
+              {t('dashboard.logout')}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -412,6 +438,7 @@ const styles = StyleSheet.create({
   headerActions: {
     width: '100%',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 8,
     marginBottom: 14,
@@ -423,6 +450,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     borderWidth: 1,
+  },
+  actionButtonCompact: {
+    flexBasis: '48%',
   },
   actionButtonDisabled: {
     opacity: 0.6,
@@ -443,6 +473,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 32,
   },
   actionIconWrap: {
     width: 28,
@@ -462,9 +493,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#edf7f0',
   },
   compactActionLabel: {
+    flexShrink: 1,
     color: theme.colors.text,
     fontWeight: '700',
     fontSize: 12,
+    lineHeight: 16,
     textAlign: 'center',
   },
   compactActionValue: {
@@ -472,6 +505,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 6,
     textAlign: 'center',
+    lineHeight: 16,
   },
   languageText: {
     color: theme.colors.primary,

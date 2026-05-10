@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { 
-  Alert,
   View, 
   Text, 
   StyleSheet, 
@@ -32,6 +31,7 @@ const SignUp = ({ navigation }: any) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const passwordRequirements = [
     { label: 'At least 8 characters', regex: /.{8,}/ },
@@ -52,6 +52,14 @@ const SignUp = ({ navigation }: any) => {
   const [consentGiven, setConsentGiven] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const [faceImage, setFaceImage] = useState<string | null>(null);
+
+  const goToSignIn = () => {
+    setShowSuccessModal(false);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'SignIn' }],
+    });
+  };
 
   const startCamera = async () => {
     if (!permission?.granted) {
@@ -99,16 +107,7 @@ const SignUp = ({ navigation }: any) => {
         companyName: company,
         faceImage: faceImage || undefined
       });
-      Alert.alert(t('signup.successTitle'), t('signup.successBody'), [
-        {
-          text: t('common.ok'),
-          onPress: () =>
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'SignIn' }],
-            }),
-        },
-      ]);
+      setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Sign up failed:', error);
       setErrorMessage(getErrorMessage(error, t('signup.createFailed')));
@@ -276,6 +275,31 @@ const SignUp = ({ navigation }: any) => {
               </View>
           </ScrollView>
       </KeyboardAvoidingView>
+      <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => setShowSuccessModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={styles.successIconWrap}>
+                <Text style={styles.successIcon}>✓</Text>
+              </View>
+              <Text style={styles.modalTitle}>{t('signup.successTitle')}</Text>
+              <TouchableOpacity
+                onPress={goToSignIn}
+                accessibilityRole="button"
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalMessage}>{t('signup.successBody')}</Text>
+            <Button
+              title={t('common.ok')}
+              onPress={goToSignIn}
+              variant="primary"
+            />
+          </View>
+        </View>
+      </Modal>
       <ErrorOverlay message={errorMessage} title={t('signup.failedTitle')} onClose={() => setErrorMessage(null)} />
     </ScreenLayout>
   );
@@ -323,6 +347,65 @@ const styles = StyleSheet.create({
   signInText: {
     color: '#666',
     fontSize: 14,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  successIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: '#edf7f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  successIcon: {
+    color: theme.colors.primary,
+    fontWeight: '900',
+    fontSize: 16,
+    lineHeight: 18,
+  },
+  modalTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '800',
+    color: theme.colors.text,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeText: {
+    color: theme.colors.textLight,
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  modalMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: theme.colors.text,
+    marginBottom: 14,
   },
 });
 

@@ -147,6 +147,9 @@ const Conversions = () => {
   };
 
   const handleSelectBom = (option: BomSelectionItem) => {
+    if (editingItem) {
+      return;
+    }
     setSelectedBomOption(option);
     setItemCode(option.value);
     setToUnit(option.unit);
@@ -288,6 +291,7 @@ const Conversions = () => {
               valueText={selectedBomOption?.label || itemCode || undefined}
               placeholder={t('conversions.selectItem')}
               onPress={() => setSelectionModalVisible(true)}
+              disabled={Boolean(editingItem)}
             />
             <Input
               label={t('conversions.invoiceQuantity')}

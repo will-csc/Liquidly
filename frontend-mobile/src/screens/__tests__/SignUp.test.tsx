@@ -1,8 +1,17 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { TextInput } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SignUp from '../SignUp';
 import { I18nProvider } from '../../../src/i18n/I18nProvider';
+
+const mockSignup = jest.fn();
+
+jest.mock('../../../src/services/api', () => ({
+  authService: {
+    signup: (...args: unknown[]) => mockSignup(...args),
+  },
+}));
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
@@ -12,6 +21,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 const mockNavigation = {
   navigate: jest.fn(),
   goBack: jest.fn(),
+  reset: jest.fn(),
 };
 
 const initialMetrics = {
@@ -29,6 +39,13 @@ const renderSignUp = () =>
   );
 
 describe('SignUp Screen', () => {
+  beforeEach(() => {
+    mockSignup.mockReset();
+    mockNavigation.navigate.mockReset();
+    mockNavigation.goBack.mockReset();
+    mockNavigation.reset.mockReset();
+  });
+
   it('renders correctly', () => {
     const { getByText } = renderSignUp();
     
@@ -55,5 +72,38 @@ describe('SignUp Screen', () => {
     // unless I add testID.
     // However, I can try to find the button by its parent or just rely on manual verification for the back button
     // or add testID in a future refactor.
+  });
+
+  it('exibe mensagem de sucesso apos cadastro concluido', async () => {
+    mockSignup.mockResolvedValue({ id: 1 });
+
+    const { UNSAFE_getAllByType, getByText } = renderSignUp();
+    const inputs = UNSAFE_getAllByType(TextInput);
+
+    fireEvent.changeText(inputs[0], 'William');
+    fireEvent.changeText(inputs[1], 'william@example.com');
+    fireEvent.changeText(inputs[2], 'Liquidly');
+    fireEvent.changeText(inputs[3], 'Senha@123');
+
+    fireEvent.press(getByText('Cadastrar'));
+
+    await waitFor(() => {
+      expect(mockSignup).toHaveBeenCalledWith({
+        name: 'William',
+        email: 'william@example.com',
+        password: 'Senha@123',
+        companyName: 'Liquidly',
+        faceImage: undefined,
+      });
+    });
+
+    expect(getByText('Conta criada! Faça login.')).toBeTruthy();
+
+    fireEvent.press(getByText('OK'));
+
+    expect(mockNavigation.reset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: 'SignIn' }],
+    });
   });
 });
