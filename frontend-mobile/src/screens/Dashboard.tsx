@@ -8,9 +8,10 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TouchableOpacity,
-  Dimensions,
   FlatList,
   Modal,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,12 +29,10 @@ import ModalHeader from '../components/ModalHeader';
 import ScreenHeader from '../components/ScreenHeader';
 import SelectableListItem from '../components/SelectableListItem';
 
-const screenWidth = Dimensions.get('window').width;
-const isCompactActionsLayout = screenWidth < 390;
-
 const Dashboard = () => {
   const navigation: any = useNavigation();
   const { language, setLanguage, t } = useI18n();
+  const { width: windowWidth } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -58,6 +57,9 @@ const Dashboard = () => {
 
   const currentLanguageLabel =
     language === 'pt' ? t('language.portuguese') : language === 'es' ? t('language.spanish') : t('language.english');
+  const chartWidth = Math.max(windowWidth - 72, 220);
+  const shouldUseFallbackCharts = Platform.OS === 'web';
+  const chartSeriesColors = ['#1e8548', '#5ebf86', '#91c3a5'];
 
   const processDashboardData = (invoices: Invoice[], pos: Po[], boms: Bom[]) => {
     const totalInvoices = invoices.reduce((sum, inv) => sum + inv.qntdInvoice, 0);
@@ -190,6 +192,93 @@ const Dashboard = () => {
     });
   };
 
+  const renderMonthlyFallbackChart = () => {
+    if (!monthlyData) return null;
+
+    const maxValue = Math.max(
+      1,
+      ...monthlyData.datasets.flatMap((dataset: { data: number[] }) => dataset.data)
+    );
+
+    return (
+      <View style={styles.fallbackChart}>
+        <View style={styles.fallbackLegend}>
+          {monthlyData.legend.map((label: string, index: number) => (
+            <View key={label} style={styles.fallbackLegendItem}>
+              <View
+                style={[
+                  styles.fallbackLegendSwatch,
+                  { backgroundColor: chartSeriesColors[index] ?? theme.colors.primary },
+                ]}
+              />
+              <Text style={styles.fallbackLegendText}>{label}</Text>
+            </View>
+          ))}
+        </View>
+        {monthlyData.labels.map((label: string, index: number) => (
+          <View key={`${label}-${index}`} style={styles.fallbackRow}>
+            <Text style={styles.fallbackRowLabel}>{label}</Text>
+            <View style={styles.fallbackBars}>
+              {monthlyData.datasets.map((dataset: { data: number[] }, datasetIndex: number) => {
+                const value = dataset.data[index] ?? 0;
+                const widthPercent = `${Math.max((value / maxValue) * 100, value > 0 ? 8 : 0)}%`;
+
+                return (
+                  <View key={`${label}-${datasetIndex}`} style={styles.fallbackBarTrack}>
+                    <View
+                      style={[
+                        styles.fallbackBarFill,
+                        {
+                          width: widthPercent,
+                          backgroundColor: chartSeriesColors[datasetIndex] ?? theme.colors.primary,
+                        },
+                      ]}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderStatusFallbackChart = () => {
+    const total = statusData.reduce((sum, item) => sum + item.population, 0);
+
+    return (
+      <View style={styles.fallbackChart}>
+        {statusData.map((item) => {
+          const percent = total > 0 ? Math.round((item.population / total) * 100) : 0;
+
+          return (
+            <View key={item.name} style={styles.statusRow}>
+              <View style={styles.statusRowHeader}>
+                <View style={styles.statusLabelWrap}>
+                  <View style={[styles.statusSwatch, { backgroundColor: item.color }]} />
+                  <Text style={styles.statusLabel}>{item.name}</Text>
+                </View>
+                <Text style={styles.statusValue}>{item.population} ({percent}%)</Text>
+              </View>
+              <View style={styles.statusTrack}>
+                <View
+                  style={[
+                    styles.statusFill,
+                    {
+                      width: `${percent}%`,
+                      backgroundColor: item.color,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
@@ -208,7 +297,6 @@ const Dashboard = () => {
             onPress={() => setLanguageModalVisible(true)}
             style={[
               styles.actionButton,
-              isCompactActionsLayout ? styles.actionButtonCompact : null,
               styles.languageButton,
               isDeletingAccount ? styles.actionButtonDisabled : null,
             ]}
@@ -240,7 +328,6 @@ const Dashboard = () => {
             }}
             style={[
               styles.actionButton,
-              isCompactActionsLayout ? styles.actionButtonCompact : null,
               styles.deleteButton,
               isDeletingAccount ? styles.actionButtonDisabled : null,
             ]}
@@ -267,7 +354,6 @@ const Dashboard = () => {
             }}
             style={[
               styles.actionButton,
-              isCompactActionsLayout ? styles.actionButtonCompact : null,
               styles.logoutButton,
               isDeletingAccount ? styles.actionButtonDisabled : null,
             ]}
@@ -303,48 +389,56 @@ const Dashboard = () => {
 
             {monthlyData && (
               <ChartCard title={t('dashboard.chart.monthlyComparison')}>
-                <LineChart
-                  data={monthlyData}
-                  width={screenWidth - 40}
-                  height={220}
-                  chartConfig={{
-                    backgroundColor: "#ffffff",
-                    backgroundGradientFrom: "#ffffff",
-                    backgroundGradientTo: "#ffffff",
-                    decimalPlaces: 0,
-                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    style: { borderRadius: 16 },
-                    propsForDots: {
-                      r: "4",
-                      strokeWidth: "2",
-                      stroke: "#ffa726"
-                    }
-                  }}
-                  bezier
-                  style={{
-                    marginVertical: 8,
-                    borderRadius: 16
-                  }}
-                />
+                {shouldUseFallbackCharts ? (
+                  renderMonthlyFallbackChart()
+                ) : (
+                  <LineChart
+                    data={monthlyData}
+                    width={chartWidth}
+                    height={220}
+                    chartConfig={{
+                      backgroundColor: "#ffffff",
+                      backgroundGradientFrom: "#ffffff",
+                      backgroundGradientTo: "#ffffff",
+                      decimalPlaces: 0,
+                      color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                      labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                      style: { borderRadius: 16 },
+                      propsForDots: {
+                        r: "4",
+                        strokeWidth: "2",
+                        stroke: "#ffa726"
+                      }
+                    }}
+                    bezier
+                    style={{
+                      marginVertical: 8,
+                      borderRadius: 16
+                    }}
+                  />
+                )}
               </ChartCard>
             )}
 
             {statusData.length > 0 && (
               <ChartCard title={t('dashboard.chart.invoiceStatus')}>
-                <PieChart
-                  data={statusData}
-                  width={screenWidth - 40}
-                  height={220}
-                  chartConfig={{
-                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  }}
-                  accessor={"population"}
-                  backgroundColor={"transparent"}
-                  paddingLeft={"15"}
-                  center={[10, 0]}
-                  absolute
-                />
+                {shouldUseFallbackCharts ? (
+                  renderStatusFallbackChart()
+                ) : (
+                  <PieChart
+                    data={statusData}
+                    width={chartWidth}
+                    height={220}
+                    chartConfig={{
+                      color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    }}
+                    accessor={"population"}
+                    backgroundColor={"transparent"}
+                    paddingLeft={"15"}
+                    center={[10, 0]}
+                    absolute
+                  />
+                )}
               </ChartCard>
             )}
           </View>
@@ -444,15 +538,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   actionButton: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 150,
     minHeight: 76,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 10,
     borderWidth: 1,
-  },
-  actionButtonCompact: {
-    flexBasis: '48%',
   },
   actionButtonDisabled: {
     opacity: 0.6,
@@ -496,22 +589,17 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     color: theme.colors.text,
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 16,
     textAlign: 'center',
   },
   compactActionValue: {
     color: theme.colors.textLight,
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
     marginTop: 6,
     textAlign: 'center',
     lineHeight: 16,
-  },
-  languageText: {
-    color: theme.colors.primary,
-    fontWeight: '700',
-    fontSize: 13,
-    marginTop: 2,
   },
   dashboardContainer: {
     marginTop: 10,
@@ -588,6 +676,95 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: '#fff',
     fontWeight: '700',
+  },
+  fallbackChart: {
+    width: '100%',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  fallbackLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  fallbackLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fallbackLegendSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 6,
+  },
+  fallbackLegendText: {
+    color: theme.colors.textLight,
+    fontSize: 12,
+  },
+  fallbackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fallbackRowLabel: {
+    width: 44,
+    color: theme.colors.text,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  fallbackBars: {
+    flex: 1,
+    gap: 6,
+  },
+  fallbackBarTrack: {
+    width: '100%',
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: '#edf2ef',
+    overflow: 'hidden',
+  },
+  fallbackBarFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  statusRow: {
+    gap: 8,
+  },
+  statusRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  statusLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  statusSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  statusLabel: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  statusValue: {
+    color: theme.colors.textLight,
+    fontSize: 12,
+  },
+  statusTrack: {
+    width: '100%',
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#edf2ef',
+    overflow: 'hidden',
+  },
+  statusFill: {
+    height: '100%',
+    borderRadius: 999,
   },
 });
 

@@ -99,7 +99,7 @@ describe('SignUp Screen', () => {
 
     expect(getByText('Conta criada! Faça login.')).toBeTruthy();
 
-    fireEvent.press(getByText('OK'));
+    fireEvent.press(getByText('Ir para login'));
 
     expect(mockNavigation.reset).toHaveBeenCalledWith({
       index: 0,

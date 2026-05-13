@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ScrollView,
-  Modal,
   Image,
   Switch
 } from 'react-native';
@@ -31,7 +30,7 @@ const SignUp = ({ navigation }: any) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [signupSucceeded, setSignupSucceeded] = useState(false);
 
   const passwordRequirements = [
     { label: 'At least 8 characters', regex: /.{8,}/ },
@@ -54,7 +53,6 @@ const SignUp = ({ navigation }: any) => {
   const [faceImage, setFaceImage] = useState<string | null>(null);
 
   const goToSignIn = () => {
-    setShowSuccessModal(false);
     navigation.reset({
       index: 0,
       routes: [{ name: 'SignIn' }],
@@ -107,7 +105,8 @@ const SignUp = ({ navigation }: any) => {
         companyName: company,
         faceImage: faceImage || undefined
       });
-      setShowSuccessModal(true);
+      setErrorMessage(null);
+      setSignupSucceeded(true);
     } catch (error: any) {
       console.error('Sign up failed:', error);
       setErrorMessage(getErrorMessage(error, t('signup.createFailed')));
@@ -262,8 +261,25 @@ const SignUp = ({ navigation }: any) => {
                 title={loading ? t('signup.signingUp') : t('common.signup')}
                 onPress={handleSignUp}
                 variant="primary"
-                disabled={loading}
+                disabled={loading || signupSucceeded}
               />
+
+              {signupSucceeded ? (
+                <View style={styles.successBanner}>
+                  <View style={styles.successBannerHeader}>
+                    <View style={styles.successIconWrap}>
+                      <Text style={styles.successIcon}>✓</Text>
+                    </View>
+                    <Text style={styles.successBannerTitle}>{t('signup.successTitle')}</Text>
+                  </View>
+                  <Text style={styles.successBannerText}>{t('signup.successBody')}</Text>
+                  <Button
+                    title={t('signup.successAction')}
+                    onPress={goToSignIn}
+                    variant="primary"
+                  />
+                </View>
+              ) : null}
 
               <View style={styles.signInContainer}>
                 <InlineLinkText
@@ -275,31 +291,6 @@ const SignUp = ({ navigation }: any) => {
               </View>
           </ScrollView>
       </KeyboardAvoidingView>
-      <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => setShowSuccessModal(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={styles.successIconWrap}>
-                <Text style={styles.successIcon}>✓</Text>
-              </View>
-              <Text style={styles.modalTitle}>{t('signup.successTitle')}</Text>
-              <TouchableOpacity
-                onPress={goToSignIn}
-                accessibilityRole="button"
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeText}>×</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalMessage}>{t('signup.successBody')}</Text>
-            <Button
-              title={t('common.ok')}
-              onPress={goToSignIn}
-              variant="primary"
-            />
-          </View>
-        </View>
-      </Modal>
       <ErrorOverlay message={errorMessage} title={t('signup.failedTitle')} onClose={() => setErrorMessage(null)} />
     </ScreenLayout>
   );
@@ -348,21 +339,15 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#fff',
+  successBanner: {
+    marginTop: 14,
     borderRadius: 16,
     padding: 16,
+    backgroundColor: '#edf7f0',
+    borderWidth: 1,
+    borderColor: '#cfe5d8',
   },
-  modalHeader: {
+  successBannerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
@@ -382,26 +367,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 18,
   },
-  modalTitle: {
-    flex: 1,
+  successBannerTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: theme.colors.text,
   },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeText: {
-    color: theme.colors.textLight,
-    fontSize: 20,
-    fontWeight: '800',
-    lineHeight: 20,
-  },
-  modalMessage: {
+  successBannerText: {
     fontSize: 14,
     lineHeight: 20,
     color: theme.colors.text,
