@@ -19,6 +19,10 @@ import type {
 
 type RequestConfigWithLoading = InternalAxiosRequestConfig & {
   skipGlobalLoading?: boolean;
+  metadata?: {
+    start: number;
+    id: string;
+  };
 };
 
 // URL Configuration
@@ -27,6 +31,8 @@ const PROD_URL = import.meta.env.VITE_API_URL_PROD || 'https://liquidly-backend.
 const LOCAL_URL = (import.meta.env.VITE_API_URL_LOCAL || '').trim();
 const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS || 15000);
 const canUseLocalFallback = !IS_PROD_BUILD && LOCAL_URL.length > 0;
+const LOG_API = !IS_PROD_BUILD;
+const LOG_TO_FRONTEND_TERMINAL = import.meta.env.DEV;
 
 // Determine initial URL based on environment
 // Always try PROD first, fallback to LOCAL only if PROD is unreachable.
@@ -37,6 +43,88 @@ let currentBaseUrl = INITIAL_URL;
 let isFallbackActive = false;
 
 console.log(`[API Config] Initializing API with URL: ${currentBaseUrl} (Mode: ${import.meta.env.MODE})`);
+
+const nowMs = () => Date.now();
+
+const newRequestId = () => `${nowMs().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+
+const redactValue = (key: string, value: unknown) => {
+  const normalizedKey = key.toLowerCase();
+  if (
+    normalizedKey === 'authorization' ||
+    normalizedKey.includes('token') ||
+    normalizedKey.includes('password') ||
+    normalizedKey.includes('faceimage')
+  ) {
+    return '[REDACTED]';
+  }
+  if (typeof Blob !== 'undefined' && value instanceof Blob) {
+    return `[Blob size=${value.size}]`;
+  }
+  return value;
+};
+
+const redactObject = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.slice(0, 20).map((item) => redactObject(item));
+  }
+
+  const record = asRecord(value);
+  if (!record) return value;
+
+  const output: Record<string, unknown> = {};
+  for (const [key, entryValue] of Object.entries(record)) {
+    output[key] = redactValue(key, redactObject(entryValue));
+  }
+  return output;
+};
+
+const safeToLog = (value: unknown): unknown => {
+  if (value === undefined || value === null) return value;
+  if (typeof value === 'string') {
+    return value.length > 800 ? `${value.slice(0, 800)}...` : value;
+  }
+  if (typeof FormData !== 'undefined' && value instanceof FormData) {
+    return '[FormData]';
+  }
+  return redactObject(value);
+};
+
+const postFrontendTerminalLog = (payload: Record<string, unknown>) => {
+  if (!LOG_TO_FRONTEND_TERMINAL || typeof window === 'undefined') return;
+
+  const body = JSON.stringify(payload);
+  const url = '/__client-log';
+
+  if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+    const ok = navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+    if (ok) return;
+  }
+
+  void fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+    keepalive: true,
+  }).catch(() => {
+    void 0;
+  });
+};
+
+const logApiEvent = (label: string, payload: Record<string, unknown>, consoleMethod: 'log' | 'warn' | 'error' = 'log') => {
+  if (!LOG_API) return;
+
+  console[consoleMethod](label, payload);
+  postFrontendTerminalLog({
+    timestamp: new Date().toISOString(),
+    label,
+    consoleMethod,
+    payload,
+  });
+};
 
 const getResponseMessage = (data: unknown): string | null => {
   if (typeof data !== 'object' || data === null) return null;
@@ -60,21 +148,27 @@ const getStoredLanguage = (): string => {
 };
 
 const logApiError = (label: string, error: AxiosError) => {
-  const config = error.config;
+  const config = error.config as RequestConfigWithLoading | undefined;
   const method = typeof config?.method === 'string' ? config.method.toUpperCase() : undefined;
   const url = config?.url;
   const baseURL = config?.baseURL || currentBaseUrl;
   const status = error.response?.status;
   const responseMessage = getResponseMessage(error.response?.data);
+  const elapsedMs = config?.metadata ? nowMs() - config.metadata.start : undefined;
 
-  console.error(label, {
+  logApiEvent(label, {
+    id: config?.metadata?.id,
     baseURL,
     method,
     url,
     status,
     code: error.code,
     message: responseMessage || error.message,
-  });
+    elapsedMs,
+    params: safeToLog(config?.params),
+    request: safeToLog(config?.data),
+    response: safeToLog(error.response?.data),
+  }, 'error');
 };
 
 // Create Axios Instance
@@ -89,6 +183,7 @@ const api: AxiosInstance = axios.create({
 // Request Interceptor: Ensure correct Base URL is used
 api.interceptors.request.use(
   (config: RequestConfigWithLoading) => {
+    config.metadata = { start: nowMs(), id: newRequestId() };
     if (!config.skipGlobalLoading) {
       loadingBus.start();
     }
@@ -118,6 +213,15 @@ api.interceptors.request.use(
         h.Authorization = `Bearer ${token}`;
       }
     }
+    logApiEvent('[API Request]', {
+      id: config.metadata.id,
+      method: typeof config.method === 'string' ? config.method.toUpperCase() : 'GET',
+      baseURL: config.baseURL || currentBaseUrl,
+      url: config.url || '',
+      params: safeToLog(config.params),
+      data: safeToLog(config.data),
+      headers: safeToLog(config.headers),
+    });
     return config;
   },
   (error) => {
@@ -133,6 +237,15 @@ api.interceptors.response.use(
     if (!responseConfig.skipGlobalLoading) {
       loadingBus.end();
     }
+    logApiEvent('[API Response]', {
+      id: responseConfig.metadata?.id,
+      method: typeof responseConfig.method === 'string' ? responseConfig.method.toUpperCase() : 'GET',
+      baseURL: responseConfig.baseURL || currentBaseUrl,
+      url: responseConfig.url || '',
+      status: response.status,
+      elapsedMs: responseConfig.metadata ? nowMs() - responseConfig.metadata.start : undefined,
+      data: safeToLog(response.data),
+    });
     return response;
   },
   async (error: AxiosError) => {
@@ -152,7 +265,16 @@ api.interceptors.response.use(
       (error.code === 'ECONNABORTED' || error.message.includes('Network Error') || !error.response)
     ) {
       logApiError('[API Error] Production request failed (will try local fallback)', error);
-      console.warn(`[API Failover] Failed to connect to ${PROD_URL}. Attempting to connect to local server (Backup)...`);
+      logApiEvent(
+        '[API Failover]',
+        {
+          from: PROD_URL,
+          to: LOCAL_URL,
+          reason: error.message,
+          code: error.code,
+        },
+        'warn'
+      );
       
       // Mark request to prevent infinite loop
       originalRequest._retry = true;
@@ -166,13 +288,18 @@ api.interceptors.response.use(
       
       // Update current request URL and retry
       originalRequest.baseURL = LOCAL_URL;
-      
-      console.log(`[API Failover] Switching to Backup URL: ${LOCAL_URL}`);
+      logApiEvent('[API Failover] Switching URL', { activeBaseUrl: LOCAL_URL }, 'warn');
       
       try {
         return await api(originalRequest);
       } catch (retryError) {
-        console.error('[API Failover] Backup server (local) also failed.', retryError);
+        if (axios.isAxiosError(retryError)) {
+          logApiError('[API Failover] Backup server (local) also failed', retryError);
+        } else {
+          logApiEvent('[API Failover] Backup server (local) also failed', {
+            error: retryError instanceof Error ? retryError.message : String(retryError),
+          }, 'error');
+        }
         return Promise.reject(retryError);
       }
     }

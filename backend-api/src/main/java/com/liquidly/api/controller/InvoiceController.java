@@ -2,6 +2,8 @@ package com.liquidly.api.controller;
 
 import com.liquidly.api.model.Invoice;
 import com.liquidly.api.service.InvoiceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,43 +15,58 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class InvoiceController {
 
+    private static final Logger logger = LoggerFactory.getLogger(InvoiceController.class);
+
     @Autowired
     private InvoiceService invoiceService;
 
     // Create an invoice.
     @PostMapping
     public ResponseEntity<Invoice> createInvoice(@RequestBody Invoice invoice) {
-        return ResponseEntity.ok(invoiceService.createInvoice(invoice));
+        logger.info("Recebido createInvoice: invoiceNumber={}, itemCode={}", invoice.getInvoiceNumber(), invoice.getItemCode());
+        Invoice created = invoiceService.createInvoice(invoice);
+        logger.info("Invoice criada: id={}, invoiceNumber={}, itemCode={}", created.getId(), created.getInvoiceNumber(), created.getItemCode());
+        return ResponseEntity.ok(created);
     }
 
     // Return all invoices.
     @GetMapping
     public ResponseEntity<List<Invoice>> getAllInvoices() {
-        return ResponseEntity.ok(invoiceService.getAllInvoices());
+        List<Invoice> invoices = invoiceService.getAllInvoices();
+        logger.info("Listagem de invoices concluida: total={}", invoices.size());
+        return ResponseEntity.ok(invoices);
     }
 
     // Return invoices filtered by company id.
     @GetMapping("/company/{companyId}")
     public ResponseEntity<List<Invoice>> getInvoicesByCompanyId(@PathVariable Long companyId) {
-        return ResponseEntity.ok(invoiceService.getInvoicesByCompanyId(companyId));
+        List<Invoice> invoices = invoiceService.getInvoicesByCompanyId(companyId);
+        logger.info("Listagem de invoices por company concluida: companyId={}, total={}", companyId, invoices.size());
+        return ResponseEntity.ok(invoices);
     }
 
     // Return invoices filtered by project id.
     @GetMapping("/project/{projectId}")
     public ResponseEntity<List<Invoice>> getInvoicesByProjectId(@PathVariable Long projectId) {
-        return ResponseEntity.ok(invoiceService.getInvoicesByProjectId(projectId));
+        List<Invoice> invoices = invoiceService.getInvoicesByProjectId(projectId);
+        logger.info("Listagem de invoices por projeto concluida: projectId={}, total={}", projectId, invoices.size());
+        return ResponseEntity.ok(invoices);
     }
 
     // Return an invoice by id.
     @GetMapping("/{id}")
     public ResponseEntity<Invoice> getInvoiceById(@PathVariable Long id) {
-        return ResponseEntity.ok(invoiceService.getInvoiceById(id));
+        Invoice invoice = invoiceService.getInvoiceById(id);
+        logger.info("Invoice encontrada: id={}, invoiceNumber={}", invoice.getId(), invoice.getInvoiceNumber());
+        return ResponseEntity.ok(invoice);
     }
 
     // Delete an invoice by id.
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
+        logger.info("Recebido deleteInvoice: id={}", id);
         invoiceService.deleteInvoice(id);
+        logger.info("Invoice deletada: id={}", id);
         return ResponseEntity.noContent().build();
     }
 }
