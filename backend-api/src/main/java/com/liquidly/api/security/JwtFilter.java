@@ -1,5 +1,7 @@
 package com.liquidly.api.security;
 
+import com.liquidly.api.repository.UserRepository;
+import com.liquidly.api.service.UserSessionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,9 +22,13 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtFilter.class);
     private final JwtService jwtService;
+    private final UserRepository userRepository;
+    private final UserSessionService userSessionService;
 
-    public JwtFilter(JwtService jwtService) {
+    public JwtFilter(JwtService jwtService, UserRepository userRepository, UserSessionService userSessionService) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
+        this.userSessionService = userSessionService;
     }
 
     @Override
@@ -47,6 +53,17 @@ public class JwtFilter extends OncePerRequestFilter {
             if (jwtService.isTokenValid(token)) {
 
                 String email = jwtService.extractEmail(token);
+                String sessionId = jwtService.extractSessionId(token);
+
+                boolean userExists = userRepository.existsByEmail(email);
+                boolean sessionActive = userSessionService.isSessionActive(email, sessionId);
+
+                if (!userExists || !sessionActive) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"code\":\"SESSION_INVALID\",\"message\":\"Session is invalid\"}");
+                    return;
+                }
 
                 // Store the authenticated principal in the Spring Security context.
                 UsernamePasswordAuthenticationToken auth =

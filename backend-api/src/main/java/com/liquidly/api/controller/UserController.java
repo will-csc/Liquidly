@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -46,7 +47,9 @@ public class UserController {
         logger.info("Recebido login por email: email={}", request.getEmail());
 
         UserDTO user = userService.login(request);
-        String token = jwtService.generateToken(user.getEmail());
+        String sessionId = UUID.randomUUID().toString();
+        userService.registerSession(user.getId(), sessionId, jwtService.calculateExpirationInstant());
+        String token = jwtService.generateToken(user.getEmail(), sessionId);
         logger.info("Login concluido: userId={}, email={}, companyId={}", user.getId(), user.getEmail(), user.getCompanyId());
         return ResponseEntity.ok(
                 Map.of(
@@ -61,7 +64,9 @@ public class UserController {
     public ResponseEntity<?> loginFace(@RequestBody FaceLoginRequest request) {
         logger.info("Recebido login facial");
         UserDTO user = userService.loginFace(request);
-        String token = jwtService.generateToken(user.getEmail());
+        String sessionId = UUID.randomUUID().toString();
+        userService.registerSession(user.getId(), sessionId, jwtService.calculateExpirationInstant());
+        String token = jwtService.generateToken(user.getEmail(), sessionId);
         logger.info("Login facial concluido: userId={}, email={}, companyId={}", user.getId(), user.getEmail(), user.getCompanyId());
         return ResponseEntity.ok(
                 Map.of(
@@ -125,11 +130,28 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        logger.info("Recebido logout");
+        userService.logout(resolveBearerToken(authorizationHeader));
+        return ResponseEntity.ok(Map.of("message", "ok"));
+    }
+
     // Delete a user by id.
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable Long id) {
+    public void deleteUser(@PathVariable Long id, @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         logger.info("Recebido delete de usuario: userId={}", id);
-        userService.deleteUser(id);
+        String token = resolveBearerToken(authorizationHeader);
+        String requesterEmail = jwtService.extractEmail(token);
+        String requesterSessionId = jwtService.extractSessionId(token);
+        userService.deleteUser(id, requesterEmail, requesterSessionId);
         logger.info("Delete de usuario concluido: userId={}", id);
+    }
+
+    private String resolveBearerToken(String authorizationHeader) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid authorization header");
+        }
+        return authorizationHeader.substring(7).trim();
     }
 }

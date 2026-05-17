@@ -37,6 +37,7 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 import java.util.stream.Collectors;
 
 
@@ -81,6 +82,9 @@ public class UserService {
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private UserSessionService userSessionService;
 
     // Create a new user account, validate password rules, and enforce company uniqueness when a company name is provided.
     public UserDTO signup(SignupRequest request) {
@@ -421,6 +425,16 @@ public class UserService {
         return mapToDTO(user);
     }
 
+    @Transactional
+    public void registerSession(Long userId, String sessionId, Instant expiresAt) {
+        userSessionService.registerSession(userId, sessionId, expiresAt);
+    }
+
+    @Transactional
+    public void logout(String sessionId) {
+        userSessionService.logout(sessionId);
+    }
+
     private UserDTO mapToDTO(User user) {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());
@@ -434,12 +448,28 @@ public class UserService {
     }
 
     @Transactional
-    public void deleteUser(Long id) {
+    public void deleteUser(Long id, String requesterEmail, String requesterSessionId) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        if (requesterEmail == null || requesterEmail.isBlank()) {
+            throw new RuntimeException("Authenticated user not found");
+        }
+
+        User requester = userRepository.findByEmail(requesterEmail.trim())
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+
+        if (!requester.getId().equals(user.getId())) {
+            throw new RuntimeException("You can only delete your own account");
+        }
+
+        if (userSessionService.hasOtherActiveSessions(user.getId(), requesterSessionId)) {
+            throw new RuntimeException("Cannot delete account because there is another active login");
+        }
+
         Long companyId = user.getCompany() != null ? user.getCompany().getId() : null;
 
+        userSessionService.deleteAllSessionsForUser(user.getId());
         userRepository.delete(user);
         userRepository.flush();
 

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { loadingBus } from './loadingBus';
-import { readSessionToken } from '@/lib/authStorage';
+import { clearAuthSession, readSessionToken } from '@/lib/authStorage';
 import type { 
   User, 
   AuthResponse,
@@ -137,6 +137,20 @@ const getStoredToken = (): string => {
   return readSessionToken();
 };
 
+const handleUnauthorizedSession = () => {
+  clearAuthSession();
+  if (typeof window === 'undefined') return;
+
+  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (window.location.pathname !== '/login') {
+    const next = encodeURIComponent(currentPath || '/dashboard');
+    window.location.replace(`/login?expired=1&from=${next}`);
+    return;
+  }
+
+  window.location.reload();
+};
+
 const getStoredLanguage = (): string => {
   try {
     const v = localStorage.getItem('language') || '';
@@ -254,6 +268,13 @@ api.interceptors.response.use(
       loadingBus.end();
     }
 
+    const status = error.response?.status;
+    if ((status === 401 || status === 403) && originalRequest?.url !== '/api/users/login' && originalRequest?.url !== '/api/users/login-face') {
+      logApiError('[API Unauthorized]', error);
+      handleUnauthorizedSession();
+      return Promise.reject(error);
+    }
+
     // Check if it's a network/connection error and retry hasn't been attempted yet
     // Only attempt failover if we are currently using PROD_URL
     if (
@@ -368,6 +389,10 @@ export const authService = {
 
   resetPassword: async (email: string, code: string, newPassword: string): Promise<void> => {
     await api.post('/api/users/recovery/reset-password', { email, code, newPassword });
+  },
+
+  logout: async (): Promise<void> => {
+    await api.post('/api/users/logout');
   }
 };
 

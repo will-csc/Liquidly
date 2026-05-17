@@ -14,7 +14,7 @@ import trashIcon from "../assets/icons/trash-2.svg";
 import { useI18n } from "@/i18n/i18n";
 import type { User as StoredUser } from "@/types";
 import { Button } from "@/components/ui/button";
-import { userService } from "@/services/api";
+import { authService, userService } from "@/services/api";
 import { clearAuthSession, readSessionUser } from "@/lib/authStorage";
 
 const navItems = [
@@ -29,6 +29,18 @@ const readStoredUser = (): StoredUser | null => readSessionUser<StoredUser>();
 
 const redirectToLanding = () => {
   window.location.replace("/");
+};
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = (error as { response?: { data?: unknown } }).response;
+    const data = response?.data;
+    if (typeof data === "object" && data !== null && "message" in data) {
+      const message = (data as { message?: unknown }).message;
+      if (typeof message === "string" && message.trim()) return message;
+    }
+  }
+  return fallback;
 };
 
 const ControlPanelNav = () => {
@@ -75,7 +87,7 @@ const ControlPanelNav = () => {
       redirectToLanding();
     } catch (error) {
       console.error("Failed to delete account", error);
-      setDeleteError("Falha ao deletar. Tente novamente.");
+      setDeleteError(getApiErrorMessage(error, "Falha ao deletar. Tente novamente."));
     } finally {
       setIsDeleting(false);
     }
@@ -132,10 +144,16 @@ const ControlPanelNav = () => {
               </button>
               <button
                 className="w-full text-left px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors flex items-center gap-3 font-medium"
-                onClick={() => {
-                  clearAuthSession();
-                  setIsMenuOpen(false);
-                  redirectToLanding();
+                onClick={async () => {
+                  try {
+                    await authService.logout();
+                  } catch (error) {
+                    console.warn("Failed to notify logout", error);
+                  } finally {
+                    clearAuthSession();
+                    setIsMenuOpen(false);
+                    redirectToLanding();
+                  }
                 }}
               >
                 <SafeIcon icon={LogOut} fallbackSrc={logoutIcon} className="w-4 h-4" />

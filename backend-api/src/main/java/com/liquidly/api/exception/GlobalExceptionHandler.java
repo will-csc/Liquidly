@@ -62,6 +62,14 @@ public class GlobalExceptionHandler {
             status = HttpStatus.UNAUTHORIZED;
             code = "AUTHENTICATED_USER_NOT_FOUND";
             messageKey = "error.auth.user_not_found";
+        } else if (msg.contains("Cannot delete account because there is another active login")) {
+            status = HttpStatus.CONFLICT;
+            code = "ACCOUNT_DELETE_ACTIVE_LOGIN";
+            messageKey = "error.account.delete_active_login";
+        } else if (msg.contains("You can only delete your own account")) {
+            status = HttpStatus.FORBIDDEN;
+            code = "ACCOUNT_DELETE_FORBIDDEN";
+            messageKey = "error.account.delete_forbidden";
         } else if (msg.contains("Authenticated user does not have a company")) {
             status = HttpStatus.FORBIDDEN;
             code = "AUTHENTICATED_USER_COMPANY_REQUIRED";

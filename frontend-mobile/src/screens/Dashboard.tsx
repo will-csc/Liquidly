@@ -16,7 +16,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../styles/theme';
-import { invoiceService, poService, bomService, userService } from '../services/api';
+import { authService, invoiceService, poService, bomService, userService } from '../services/api';
 import { userStorage } from '../services/userStorage';
 import { Invoice, Po, Bom } from '../types';
 import { LineChart, PieChart } from 'react-native-chart-kit';
@@ -349,8 +349,14 @@ const Dashboard = () => {
           <TouchableOpacity
             onPress={async () => {
               if (isDeletingAccount) return;
-              await userStorage.clearUser();
-              goToEntry();
+              try {
+                await authService.logout();
+              } catch (error) {
+                console.warn('Falha ao notificar logout', error);
+              } finally {
+                await userStorage.clearUser();
+                goToEntry();
+              }
             }}
             style={[
               styles.actionButton,

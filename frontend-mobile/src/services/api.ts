@@ -305,6 +305,10 @@ export const authService = {
 
   resetPassword: async (data: { email: string; code: string; newPassword: string }): Promise<void> => {
     await api.post('/api/users/recovery/reset-password', data);
+  },
+
+  logout: async (): Promise<void> => {
+    await api.post('/api/users/logout');
   }
 };
 
