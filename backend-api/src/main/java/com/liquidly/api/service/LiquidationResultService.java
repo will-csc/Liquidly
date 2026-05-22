@@ -169,10 +169,9 @@ public class LiquidationResultService {
         }
 
         Project project = requireProjectInCompany(projectId, resolvedCompanyId);
+        notifyProgress(progressListener, 5, "Resetando dados", "Limpando os resultados anteriores da empresa e restaurando os saldos originais.");
+        resetLiquidationDataForCompany(resolvedCompanyId);
         notifyProgress(progressListener, 10, "Carregando dados", "Carregando BOM, invoices e POs.");
-
-        // Clear previous results for the same company/project to keep the run idempotent.
-        liquidationResultRepository.deleteByCompanyIdAndProjectId(resolvedCompanyId, projectId);
 
         // Load input data for the liquidation run.
         List<Bom> boms = bomRepository.findByCompanyIdAndProjectId(resolvedCompanyId, projectId);
@@ -319,6 +318,13 @@ public class LiquidationResultService {
         notifyProgress(progressListener, 86, "Persistindo relatório", "Persistindo os resultados finais do relatório.");
         liquidationResultRepository.saveAllAndFlush(results);
         return liquidationResultRepository.findByCompanyIdAndProjectIdOrderByIdAsc(resolvedCompanyId, projectId);
+    }
+
+    private void resetLiquidationDataForCompany(Long companyId) {
+        liquidationResultRepository.deleteByCompanyId(companyId);
+        poRepository.resetRemainingQuantityByCompanyId(companyId);
+        invoiceRepository.resetRemainingQuantityByCompanyId(companyId);
+        bomRepository.resetRemainingQuantityByCompanyId(companyId);
     }
 
     public LiquidationResult getLiquidationResultByIdForCompany(Long id, Long companyId) {

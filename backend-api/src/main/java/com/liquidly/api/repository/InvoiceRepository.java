@@ -3,7 +3,9 @@ package com.liquidly.api.repository;
 import com.liquidly.api.model.Company;
 import com.liquidly.api.model.Invoice;
 import com.liquidly.api.model.Project;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -21,4 +23,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     Optional<Invoice> findByInvoiceNumberAndCompany(String invoiceNumber, Company company);
     Optional<Invoice> findByInvoiceNumberAndCompanyId(String invoiceNumber, Long companyId);
     void deleteByCompanyId(Long companyId);
+
+    @Modifying
+    @Query(value = "UPDATE invoices SET remaining_qntd = qntd_invoice WHERE company_id = :companyId", nativeQuery = true)
+    int resetRemainingQuantityByCompanyId(Long companyId);
 }

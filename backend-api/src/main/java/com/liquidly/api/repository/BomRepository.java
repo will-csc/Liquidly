@@ -3,7 +3,9 @@ package com.liquidly.api.repository;
 import com.liquidly.api.model.Bom;
 import com.liquidly.api.model.Company;
 import com.liquidly.api.model.Project;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,4 +22,8 @@ public interface BomRepository extends JpaRepository<Bom, Long> {
     List<Bom> findByCompanyIdAndProjectId(Long companyId, Long projectId);
     Optional<Bom> findByIdAndCompanyId(Long id, Long companyId);
     void deleteByCompanyId(Long companyId);
+
+    @Modifying
+    @Query(value = "UPDATE boms SET remaining_qntd = qntd WHERE company_id = :companyId", nativeQuery = true)
+    int resetRemainingQuantityByCompanyId(Long companyId);
 }

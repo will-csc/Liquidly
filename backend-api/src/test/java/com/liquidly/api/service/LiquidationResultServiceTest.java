@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -132,7 +131,9 @@ class LiquidationResultServiceTest {
         when(bomRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(invoiceRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(poRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        doNothing().when(liquidationResultRepository).deleteByCompanyIdAndProjectId(companyId, projectId);
+        when(bomRepository.resetRemainingQuantityByCompanyId(companyId)).thenReturn(1);
+        when(invoiceRepository.resetRemainingQuantityByCompanyId(companyId)).thenReturn(1);
+        when(poRepository.resetRemainingQuantityByCompanyId(companyId)).thenReturn(1);
 
         List<LiquidationResult> results = liquidationResultService.runLiquidation(companyId, projectId);
 
@@ -153,6 +154,10 @@ class LiquidationResultServiceTest {
         verify(invoiceRepository).findByCompanyIdAndProjectId(companyId, projectId);
         verify(poRepository).findByCompanyId(companyId);
         verify(authenticatedUserService).validateAndResolveCompanyId(companyId);
+        verify(liquidationResultRepository).deleteByCompanyId(companyId);
+        verify(bomRepository).resetRemainingQuantityByCompanyId(companyId);
+        verify(invoiceRepository).resetRemainingQuantityByCompanyId(companyId);
+        verify(poRepository).resetRemainingQuantityByCompanyId(companyId);
         verify(liquidationResultRepository).findByCompanyIdAndProjectIdOrderByIdAsc(eq(companyId), eq(projectId));
     }
 
