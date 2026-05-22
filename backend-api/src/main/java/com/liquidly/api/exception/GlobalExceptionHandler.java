@@ -3,14 +3,18 @@ package com.liquidly.api.exception;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.context.MessageSource;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.server.ResponseStatusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Locale;
+import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
 
 @ControllerAdvice
@@ -50,6 +54,14 @@ public class GlobalExceptionHandler {
             status = HttpStatus.BAD_GATEWAY;
             code = "RECOVERY_CODE_SEND_FAILED";
             messageKey = "error.recovery.send_code_failed";
+        } else if (msg.contains("Recovery code has expired")) {
+            status = HttpStatus.BAD_REQUEST;
+            code = "RECOVERY_CODE_EXPIRED";
+            messageKey = "error.recovery.invalid_code";
+        } else if (msg.contains("Recovery code has exceeded the maximum number of attempts")) {
+            status = HttpStatus.TOO_MANY_REQUESTS;
+            code = "RECOVERY_CODE_ATTEMPTS_EXCEEDED";
+            messageKey = "error.recovery.invalid_code";
         } else if (msg.contains("Could not send report")) {
             status = HttpStatus.BAD_GATEWAY;
             code = "REPORT_SEND_FAILED";
@@ -179,6 +191,40 @@ public class GlobalExceptionHandler {
         response.put("code", code);
         response.put("message", messageSource.getMessage(messageKey, null, messageKey, locale));
         return ResponseEntity.status(status).body(response);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationException(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        Map<String, String> response = new HashMap<>();
+        Locale locale = resolveLocale(request);
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(FieldError::getDefaultMessage)
+                .filter(value -> value != null && !value.isBlank())
+                .distinct()
+                .collect(Collectors.joining("; "));
+
+        response.put("code", "VALIDATION_ERROR");
+        response.put(
+                "message",
+                message.isBlank()
+                        ? messageSource.getMessage("error.validation.required_field", null, "error.validation.required_field", locale)
+                        : message
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleResponseStatusException(ResponseStatusException ex, HttpServletRequest request) {
+        Map<String, String> response = new HashMap<>();
+        Locale locale = resolveLocale(request);
+        String reason = ex.getReason() == null || ex.getReason().isBlank()
+                ? messageSource.getMessage("error.internal", null, "error.internal", locale)
+                : ex.getReason();
+        response.put("code", ex.getStatusCode().toString());
+        response.put("message", reason);
+        return ResponseEntity.status(ex.getStatusCode()).body(response);
     }
     
     @ExceptionHandler(Exception.class)

@@ -1,7 +1,10 @@
 package com.liquidly.api.service;
 
+import com.liquidly.api.dto.CreateBomRequest;
 import com.liquidly.api.model.Bom;
+import com.liquidly.api.model.Project;
 import com.liquidly.api.repository.BomRepository;
+import com.liquidly.api.repository.ProjectRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,13 +18,27 @@ public class BomService {
     private BomRepository bomRepository;
 
     @Autowired
+    private ProjectRepository projectRepository;
+
+    @Autowired
     private AuthenticatedUserService authenticatedUserService;
 
     // Persist a BOM entry, applying defaults for quantities and project name when missing.
-    public Bom createBom(Bom bom) {
-        if (bom == null) {
+    public Bom createBom(CreateBomRequest request) {
+        if (request == null) {
             throw new RuntimeException("BOM is required");
         }
+
+        Long companyId = authenticatedUserService.getRequiredCompanyId();
+        Project project = requireProjectInCompany(request.getProjectId(), companyId);
+        Bom bom = new Bom();
+        bom.setProject(project);
+        bom.setProjectName(normalizeProjectName(request.getProjectName(), project));
+        bom.setItemCode(normalizeRequired(request.getItemCode(), "Item code is required"));
+        bom.setItemName(normalizeRequired(request.getItemName(), "Item name is required"));
+        bom.setUmBom(normalizeRequired(request.getUmBom(), "BOM unit is required"));
+        bom.setQntd(request.getQntd());
+        bom.setRemainingQntd(request.getRemainingQntd() == null ? request.getQntd() : request.getRemainingQntd());
 
         // Default missing quantities to zero / initial values.
         if (bom.getQntd() == null) {
@@ -33,16 +50,6 @@ public class BomService {
         }
 
         // Ensure projectName is populated for downstream queries and UI usage.
-        String projectName = bom.getProjectName();
-        boolean hasProjectName = projectName != null && !projectName.trim().isEmpty();
-        if (!hasProjectName) {
-            String derived =
-                    bom.getProject() != null && bom.getProject().getName() != null && !bom.getProject().getName().trim().isEmpty()
-                            ? bom.getProject().getName().trim()
-                            : "Default Project";
-            bom.setProjectName(derived);
-        }
-
         bom.setCompany(authenticatedUserService.getRequiredCompany());
         return bomRepository.save(bom);
     }
@@ -56,7 +63,9 @@ public class BomService {
             throw new RuntimeException("BOM is required");
         }
 
-        existing.setProject(bom.getProject() != null ? bom.getProject() : existing.getProject());
+        if (bom.getProject() != null && bom.getProject().getId() != null) {
+            existing.setProject(requireProjectInCompany(bom.getProject().getId(), companyId));
+        }
 
         String projectName = bom.getProjectName();
         if (projectName != null && !projectName.trim().isEmpty()) {
@@ -105,5 +114,31 @@ public class BomService {
     public Bom getBomByIdForCompany(Long id, Long companyId) {
         return bomRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new RuntimeException("BOM not found with id: " + id));
+    }
+
+    private Project requireProjectInCompany(Long projectId, Long companyId) {
+        if (projectId == null) {
+            throw new RuntimeException("Project is required");
+        }
+        return projectRepository.findByIdAndCompanyId(projectId, companyId)
+                .orElseThrow(() -> new RuntimeException("Project not found with id: " + projectId));
+    }
+
+    private String normalizeRequired(String value, String errorMessage) {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.isEmpty()) {
+            throw new RuntimeException(errorMessage);
+        }
+        return normalized;
+    }
+
+    private String normalizeProjectName(String projectName, Project project) {
+        if (projectName != null && !projectName.trim().isEmpty()) {
+            return projectName.trim();
+        }
+        if (project != null && project.getName() != null && !project.getName().trim().isEmpty()) {
+            return project.getName().trim();
+        }
+        return "Default Project";
     }
 }

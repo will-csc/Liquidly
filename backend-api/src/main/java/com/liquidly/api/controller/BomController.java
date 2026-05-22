@@ -1,7 +1,9 @@
 package com.liquidly.api.controller;
 
+import com.liquidly.api.dto.CreateBomRequest;
 import com.liquidly.api.model.Bom;
 import com.liquidly.api.service.BomService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +24,10 @@ public class BomController {
 
     // Create a BOM entry.
     @PostMapping
-    public ResponseEntity<Bom> createBom(@RequestBody Bom bom) {
-        logger.info("Recebido createBom: itemCode={}, projectName={}", bom.getItemCode(), bom.getProjectName());
-        Bom created = bomService.createBom(bom);
+    public ResponseEntity<Bom> createBom(@Valid @RequestBody CreateBomRequest request) {
+        logger.info("Recebido createBom: projectId={}, itemCode={}, projectName={}",
+                request.getProjectId(), request.getItemCode(), request.getProjectName());
+        Bom created = bomService.createBom(request);
         logger.info("BOM criado: id={}, itemCode={}, projectName={}", created.getId(), created.getItemCode(), created.getProjectName());
         return ResponseEntity.ok(created);
     }

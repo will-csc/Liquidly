@@ -14,14 +14,15 @@ import com.liquidly.api.repository.LiquidationResultRepository;
 import com.liquidly.api.repository.PoRepository;
 import com.liquidly.api.repository.ProjectRepository;
 import com.liquidly.api.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -34,6 +35,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +48,8 @@ public class UserService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private static final SecureRandom secureRandom = new SecureRandom();
+    private static final int RECOVERY_CODE_EXPIRATION_MINUTES = 15;
+    private static final int MAX_RECOVERY_ATTEMPTS = 5;
 
     @Autowired
     private UserRepository userRepository;
@@ -86,6 +90,12 @@ public class UserService {
     @Autowired
     private UserSessionService userSessionService;
 
+    @Autowired
+    private AuthenticatedUserService authenticatedUserService;
+
+    @Value("${app.security.face-login.enabled:false}")
+    private boolean faceLoginEnabled;
+
     // Create a new user account, validate password rules, and enforce company uniqueness when a company name is provided.
     public UserDTO signup(SignupRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -102,8 +112,7 @@ public class UserService {
         if (request.getFaceImage() != null) {
             user.setFaceImage(request.getFaceImage());
         }
-
-        user.setRetrieveCode(generateUniqueRetrieveCode());
+        clearRecoveryState(user);
 
         // Handle Company
         if (request.getCompanyName() != null && !request.getCompanyName().isEmpty()) {
@@ -181,6 +190,9 @@ public class UserService {
 
     // Authenticate a user using face image matching against stored face templates.
     public UserDTO loginFace(FaceLoginRequest request) {
+        if (!faceLoginEnabled) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Face login is disabled");
+        }
         if (request.getFaceImage() == null || request.getFaceImage().isEmpty()) {
             throw new RuntimeException("Face image is required");
         }
@@ -214,13 +226,13 @@ public class UserService {
 
         User user = userRepository.findByEmail(email.trim())
                 .orElseThrow(() -> new RuntimeException("This account doesn't exist"));
+        String recoveryCode = generateRetrieveCode();
+        user.setRetrieveCode(passwordEncoder.encode(recoveryCode));
+        user.setRetrieveCodeExpiresAt(Instant.now().plus(RECOVERY_CODE_EXPIRATION_MINUTES, ChronoUnit.MINUTES));
+        user.setRetrieveCodeAttempts(0);
+        userRepository.save(user);
 
-        if (user.getRetrieveCode() == null || user.getRetrieveCode().trim().isEmpty()) {
-            user.setRetrieveCode(generateUniqueRetrieveCode());
-            userRepository.save(user);
-        }
-
-        String jsonBody = "{\"email\":\"" + escapeJson(user.getEmail()) + "\",\"code\":\"" + escapeJson(user.getRetrieveCode()) + "\"}";
+        String jsonBody = "{\"email\":\"" + escapeJson(user.getEmail()) + "\",\"code\":\"" + escapeJson(recoveryCode) + "\"}";
 
         List<String> serviceUrls = new java.util.ArrayList<>();
         if (emailServiceUrl != null && !emailServiceUrl.trim().isEmpty()) {
@@ -288,18 +300,37 @@ public class UserService {
         User user = userRepository.findByEmail(email.trim())
                 .orElseThrow(() -> new RuntimeException("This account doesn't exist"));
 
-        String storedCode = user.getRetrieveCode();
-        if (storedCode == null || storedCode.trim().isEmpty()) {
+        String storedCodeHash = user.getRetrieveCode();
+        if (storedCodeHash == null || storedCodeHash.trim().isEmpty()) {
             throw new RuntimeException("Recovery code is required");
         }
 
-        if (!storedCode.trim().equals(code.trim())) {
+        Instant expiresAt = user.getRetrieveCodeExpiresAt();
+        if (expiresAt == null || !expiresAt.isAfter(Instant.now())) {
+            clearRecoveryState(user);
+            userRepository.save(user);
+            throw new RuntimeException("Recovery code has expired");
+        }
+
+        int attempts = user.getRetrieveCodeAttempts() == null ? 0 : user.getRetrieveCodeAttempts();
+        if (attempts >= MAX_RECOVERY_ATTEMPTS) {
+            clearRecoveryState(user);
+            userRepository.save(user);
+            throw new RuntimeException("Recovery code has exceeded the maximum number of attempts");
+        }
+
+        if (!looksLikeBcrypt(storedCodeHash) || !passwordEncoder.matches(code.trim(), storedCodeHash)) {
+            user.setRetrieveCodeAttempts(attempts + 1);
+            if ((attempts + 1) >= MAX_RECOVERY_ATTEMPTS) {
+                clearRecoveryState(user);
+            }
+            userRepository.save(user);
             throw new RuntimeException("Recovery code does not match");
         }
 
         validatePassword(newPassword);
         user.setPassword(passwordEncoder.encode(newPassword));
-        user.setRetrieveCode(null);
+        clearRecoveryState(user);
         userRepository.save(user);
     }
 
@@ -350,14 +381,6 @@ public class UserService {
         return String.format("%06d", code);
     }
 
-    private String generateUniqueRetrieveCode() {
-        for (int attempt = 0; attempt < 20; attempt++) {
-            String code = generateRetrieveCode();
-            if (!userRepository.existsByRetrieveCode(code)) return code;
-        }
-        throw new RuntimeException("Could not generate retrieve code");
-    }
-
     private BufferedImage decodeBase64ToImage(String base64String) throws IOException {
         String base64 = base64String;
         if (base64.contains(",")) {
@@ -406,23 +429,21 @@ public class UserService {
             throw new RuntimeException("Email already in use");
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        if (user.getRetrieveCode() == null || user.getRetrieveCode().trim().isEmpty()) {
-            user.setRetrieveCode(generateUniqueRetrieveCode());
-        }
+        clearRecoveryState(user);
         User savedUser = userRepository.save(user);
         return mapToDTO(savedUser);
     }
 
     public List<UserDTO> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+        return List.of(mapToDTO(authenticatedUserService.getRequiredAuthenticatedUser()));
     }
 
     public UserDTO getUserById(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        return mapToDTO(user);
+        User authenticatedUser = authenticatedUserService.getRequiredAuthenticatedUser();
+        if (id == null || !authenticatedUser.getId().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only access your own user");
+        }
+        return mapToDTO(authenticatedUser);
     }
 
     @Transactional
@@ -445,6 +466,12 @@ public class UserService {
             dto.setCompanyName(user.getCompany().getCompanyName());
         }
         return dto;
+    }
+
+    private void clearRecoveryState(User user) {
+        user.setRetrieveCode(null);
+        user.setRetrieveCodeExpiresAt(null);
+        user.setRetrieveCodeAttempts(null);
     }
 
     @Transactional

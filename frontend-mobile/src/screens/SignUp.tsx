@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { 
   View, 
   Text, 
@@ -21,8 +22,18 @@ import ScreenLayout from '../components/ScreenLayout';
 import { authService } from '../services/api';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
 import { useI18n } from '../i18n/i18n';
+import type { RootStackParamList } from '../navigation/types';
 
-const SignUp = ({ navigation }: any) => {
+type SignUpNavigation = Pick<
+  NativeStackNavigationProp<RootStackParamList, 'SignUp'>,
+  'navigate' | 'reset'
+>;
+
+type Props = {
+  navigation: SignUpNavigation;
+};
+
+const SignUp = ({ navigation }: Props) => {
   const { t } = useI18n();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

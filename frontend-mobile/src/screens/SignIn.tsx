@@ -12,6 +12,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { theme } from '../styles/theme';
 import Button from '../components/Button';
 import FaceLoginButton from '../components/FaceLoginButton';
@@ -22,8 +23,18 @@ import { authService } from '../services/api';
 import { userStorage } from '../services/userStorage';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
 import { useI18n } from '../i18n/i18n';
+import type { RootStackParamList } from '../navigation/types';
 
-const SignIn = ({ navigation }: any) => {
+type SignInNavigation = Pick<
+  NativeStackNavigationProp<RootStackParamList, 'SignIn'>,
+  'navigate' | 'replace'
+>;
+
+type Props = {
+  navigation: SignInNavigation;
+};
+
+const SignIn = ({ navigation }: Props) => {
   const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

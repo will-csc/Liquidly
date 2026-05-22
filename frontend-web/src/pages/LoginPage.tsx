@@ -12,6 +12,7 @@ import cameraIcon from '../assets/images/camera-icon.png';
 import type { LoginRequest } from '../types';
 import { useI18n } from '@/i18n/i18n';
 import { storeSessionAuth } from '@/lib/authStorage';
+import { validateLoginForm } from '@/utils/validation';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -149,11 +150,21 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setError(null);
     setPopupKind("error");
+
+    const validation = validateLoginForm({
+      email: formData.email,
+      password: formData.password,
+    });
+    if (!validation.success) {
+      setError(validation.error.issues[0]?.message || t("error.internal"));
+      return;
+    }
+
     setLoading(true);
 
     try {
       const loginData: LoginRequest = {
-        email: formData.email,
+        email: validation.data.email,
         password: formData.password
       };
       

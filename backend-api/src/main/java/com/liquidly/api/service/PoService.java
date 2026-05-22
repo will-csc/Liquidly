@@ -38,7 +38,7 @@ public class PoService {
 
     // Return PO records filtered by PO number.
     public List<Po> getPosByPoNumber(String poNumber) {
-        return poRepository.findByPoNumber(poNumber);
+        return poRepository.findByPoNumberAndCompanyId(poNumber, authenticatedUserService.getRequiredCompanyId());
     }
 
     // Return a PO record by id.

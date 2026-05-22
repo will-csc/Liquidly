@@ -15,6 +15,6 @@ public interface PoRepository extends JpaRepository<Po, Long> {
     List<Po> findByCompany(Company company);
     List<Po> findByCompanyId(Long companyId);
     Optional<Po> findByIdAndCompanyId(Long id, Long companyId);
-    List<Po> findByPoNumber(String poNumber);
+    List<Po> findByPoNumberAndCompanyId(String poNumber, Long companyId);
     void deleteByCompanyId(Long companyId);
 }

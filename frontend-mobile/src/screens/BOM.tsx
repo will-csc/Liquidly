@@ -165,6 +165,7 @@ const BOM = () => {
       await fetchData();
       return;
     }
+    const itemId = item.id;
 
     Alert.alert(
       t('bom.deleteTitle'),
@@ -176,7 +177,7 @@ const BOM = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await bomService.delete(item.id);
+              await bomService.delete(itemId);
               await fetchData();
             } catch (error) {
               console.error('Failed to delete', error);

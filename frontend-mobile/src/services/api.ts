@@ -7,8 +7,10 @@ import {
   FaceLoginRequest,
   LoginRequest, 
   SignupRequest, 
+  BomCreateRequest,
   Bom, 
   Conversion, 
+  InvoiceCreateRequest,
   Invoice, 
   Po, 
   Project,
@@ -274,6 +276,28 @@ const getDownloadFilename = (headers?: Record<string, string>): string => {
 
 const buildApiUrl = (path: string) => `${currentBaseUrl}${path}`;
 
+const toBomCreateRequest = (data: Bom): BomCreateRequest => ({
+  projectId: Number(data.project?.id),
+  projectName: data.projectName || data.project?.name || '',
+  itemCode: data.itemCode,
+  itemName: data.itemName,
+  umBom: data.umBom,
+  qntd: data.qntd,
+  remainingQntd: data.remainingQntd,
+});
+
+const toInvoiceCreateRequest = (data: Invoice): InvoiceCreateRequest => ({
+  projectId: Number(data.project?.id),
+  itemCode: data.itemCode || '',
+  invoiceNumber: data.invoiceNumber,
+  country: data.country || '',
+  invoiceDateString: data.invoiceDateString || '',
+  invoiceValue: data.invoiceValue ?? 0,
+  qntdInvoice: data.qntdInvoice,
+  umInvoice: data.umInvoice,
+  remainingQntd: data.remainingQntd,
+});
+
 // --- API Services ---
 
 export const authService = {
@@ -371,7 +395,7 @@ export const bomService = {
   },
 
   create: async (data: Bom): Promise<Bom> => {
-    const response = await api.post<Bom>('/api/boms', data);
+    const response = await api.post<Bom>('/api/boms', toBomCreateRequest(data));
     return response.data;
   },
 
@@ -423,7 +447,7 @@ export const invoiceService = {
   },
 
   create: async (data: Invoice): Promise<Invoice> => {
-    const response = await api.post<Invoice>('/api/invoices', data);
+    const response = await api.post<Invoice>('/api/invoices', toInvoiceCreateRequest(data));
     return response.data;
   },
 

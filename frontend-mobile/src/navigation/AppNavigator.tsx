@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons'; // Expo includes this by default
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Entry from '../screens/Entry';
 import SignIn from '../screens/SignIn';
@@ -20,9 +21,10 @@ import Report from '../screens/Report';
 import { theme } from '../styles/theme';
 import { userStorage } from '../services/userStorage';
 import { useI18n } from '../i18n/i18n';
+import type { MainTabParamList, RootStackParamList } from './types';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabs = () => {
   const { t } = useI18n();
@@ -100,7 +102,7 @@ const MainTabs = () => {
 };
 
 const ProtectedMainTabs = () => {
-  const navigation: any = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     const user = userStorage.getUser();
@@ -118,7 +120,7 @@ const ProtectedMainTabs = () => {
 
 const AppNavigator = () => {
   const [isHydrated, setIsHydrated] = useState(false);
-  const [initialRouteName, setInitialRouteName] = useState('Entry');
+  const [initialRouteName, setInitialRouteName] = useState<keyof RootStackParamList>('Entry');
 
   useEffect(() => {
     (async () => {

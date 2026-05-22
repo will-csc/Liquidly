@@ -8,6 +8,7 @@ import com.liquidly.api.dto.UserDTO;
 import com.liquidly.api.model.User;
 import com.liquidly.api.service.UserService;
 import com.liquidly.api.security.JwtService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +34,7 @@ public class UserController {
 
     // Register a new user account.
     @PostMapping("/signup")
-    public ResponseEntity<UserDTO> signup(@RequestBody SignupRequest request) {
+    public ResponseEntity<UserDTO> signup(@Valid @RequestBody SignupRequest request) {
         logger.info("Recebido signup: email={}, companyName={}", request.getEmail(), request.getCompanyName());
         UserDTO createdUser = userService.signup(request);
         logger.info("Signup concluido: userId={}, email={}, companyId={}",
@@ -43,7 +44,7 @@ public class UserController {
 
     // Authenticate by email/password and return a JWT token plus user payload.
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         logger.info("Recebido login por email: email={}", request.getEmail());
 
         UserDTO user = userService.login(request);
@@ -61,7 +62,7 @@ public class UserController {
 
     // Authenticate by face image and return a JWT token plus user payload.
     @PostMapping("/login-face")
-    public ResponseEntity<?> loginFace(@RequestBody FaceLoginRequest request) {
+    public ResponseEntity<?> loginFace(@Valid @RequestBody FaceLoginRequest request) {
         logger.info("Recebido login facial");
         UserDTO user = userService.loginFace(request);
         String sessionId = UUID.randomUUID().toString();
@@ -114,7 +115,7 @@ public class UserController {
 
     // Reset a password using the previously delivered recovery code.
     @PostMapping("/recovery/reset-password")
-    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         logger.info("Recebido reset de senha: email={}", request.getEmail());
         userService.resetPassword(request.getEmail(), request.getCode(), request.getNewPassword());
         logger.info("Reset de senha concluido: email={}", request.getEmail());
@@ -133,7 +134,8 @@ public class UserController {
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         logger.info("Recebido logout");
-        userService.logout(resolveBearerToken(authorizationHeader));
+        String token = resolveBearerToken(authorizationHeader);
+        userService.logout(jwtService.extractSessionId(token));
         return ResponseEntity.ok(Map.of("message", "ok"));
     }
 

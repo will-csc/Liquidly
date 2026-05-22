@@ -66,6 +66,9 @@ public class DatabaseConfig {
     @Value("${DATABASE_URL:}")
     private String databaseUrl;
 
+    @Value("${app.seed.default-user.enabled:false}")
+    private boolean seedDefaultUserEnabled;
+
     @Bean
     public DataSource dataSource() {
         // Choose the first available database (Primary -> Backup -> H2 in-memory fallback).
@@ -132,6 +135,10 @@ public class DatabaseConfig {
     @Bean
     public CommandLineRunner databaseStartupCheck(DataSource dataSource, UserRepository userRepository, CompanyRepository companyRepository,  PasswordEncoder passwordEncoder) {
         return args -> {
+            if (!seedDefaultUserEnabled) {
+                logger.info("Seed de usuario padrao desativado.");
+                return;
+            }
             try (Connection connection = dataSource.getConnection()) {
                 // Verify DB connectivity at startup and seed a default test user if it does not exist.
                 DatabaseMetaData meta = connection.getMetaData();

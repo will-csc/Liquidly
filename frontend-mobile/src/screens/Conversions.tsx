@@ -198,6 +198,7 @@ const Conversions = () => {
       await fetchData();
       return;
     }
+    const itemId = item.id;
 
     Alert.alert(
       t('conversions.deleteTitle'),
@@ -209,7 +210,7 @@ const Conversions = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await conversionService.delete(item.id);
+              await conversionService.delete(itemId);
               await fetchData();
             } catch (error) {
               console.error('Failed to delete', error);

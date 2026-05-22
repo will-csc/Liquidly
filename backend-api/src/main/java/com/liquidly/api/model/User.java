@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+import java.time.Instant;
+
 // JPA entity representing an application user account.
 @Entity
 @Table(name = "users")
@@ -31,6 +33,14 @@ public class User {
     @JsonIgnore
     @Column(name = "retrieve_code")
     private String retrieveCode;
+
+    @JsonIgnore
+    @Column(name = "retrieve_code_expires_at")
+    private Instant retrieveCodeExpiresAt;
+
+    @JsonIgnore
+    @Column(name = "retrieve_code_attempts")
+    private Integer retrieveCodeAttempts;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")

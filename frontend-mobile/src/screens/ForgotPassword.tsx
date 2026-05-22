@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { 
   View, 
   Text, 
@@ -18,8 +19,18 @@ import ScreenLayout from '../components/ScreenLayout';
 import { authService } from '../services/api';
 import ErrorOverlay, { getErrorMessage } from '../components/ErrorOverlay';
 import { useI18n } from '../i18n/i18n';
+import type { RootStackParamList } from '../navigation/types';
 
-const ForgotPassword = ({ navigation }: any) => {
+type ForgotPasswordNavigation = Pick<
+  NativeStackNavigationProp<RootStackParamList, 'ForgotPassword'>,
+  'navigate'
+>;
+
+type Props = {
+  navigation: ForgotPasswordNavigation;
+};
+
+const ForgotPassword = ({ navigation }: Props) => {
   const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [codeSent, setCodeSent] = useState(false);

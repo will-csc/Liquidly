@@ -1,7 +1,9 @@
 package com.liquidly.api.controller;
 
+import com.liquidly.api.dto.CreateInvoiceRequest;
 import com.liquidly.api.model.Invoice;
 import com.liquidly.api.service.InvoiceService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +24,10 @@ public class InvoiceController {
 
     // Create an invoice.
     @PostMapping
-    public ResponseEntity<Invoice> createInvoice(@RequestBody Invoice invoice) {
-        logger.info("Recebido createInvoice: invoiceNumber={}, itemCode={}", invoice.getInvoiceNumber(), invoice.getItemCode());
-        Invoice created = invoiceService.createInvoice(invoice);
+    public ResponseEntity<Invoice> createInvoice(@Valid @RequestBody CreateInvoiceRequest request) {
+        logger.info("Recebido createInvoice: projectId={}, invoiceNumber={}, itemCode={}",
+                request.getProjectId(), request.getInvoiceNumber(), request.getItemCode());
+        Invoice created = invoiceService.createInvoice(request);
         logger.info("Invoice criada: id={}, invoiceNumber={}, itemCode={}", created.getId(), created.getInvoiceNumber(), created.getItemCode());
         return ResponseEntity.ok(created);
     }

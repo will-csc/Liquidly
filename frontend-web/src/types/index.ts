@@ -77,6 +77,16 @@ export interface Bom {
   };
 }
 
+export interface BomCreateRequest {
+  projectId: number;
+  projectName: string;
+  itemCode: string;
+  itemName: string;
+  umBom: string;
+  qntd: number;
+  remainingQntd?: number;
+}
+
 export interface Conversion {
   id?: number;
   itemCode: string;
@@ -109,6 +119,18 @@ export interface Invoice {
   company?: {
     id: number;
   };
+}
+
+export interface InvoiceCreateRequest {
+  projectId: number;
+  itemCode: string;
+  invoiceNumber: string;
+  country: string;
+  invoiceDateString: string;
+  invoiceValue: number;
+  qntdInvoice: number;
+  umInvoice: string;
+  remainingQntd?: number;
 }
 
 export interface Po {

@@ -3,6 +3,7 @@
 // paginação por pontinhos e 3º slide menor. Compatível com Expo Web e mobile.
 
 import React, { useRef, useState } from 'react';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   View,
   StyleSheet,
@@ -20,6 +21,7 @@ import OnboardingArrowButton from '../components/OnboardingArrowButton';
 import OnboardingPagination from '../components/OnboardingPagination';
 import OnboardingSlide from '../components/OnboardingSlide';
 import { theme } from '../styles/theme';
+import type { RootStackParamList } from '../navigation/types';
 
 // === CONFIG RÁPIDA ===
 // Frações da largura/altura útil do slide para controlar imagens
@@ -33,7 +35,16 @@ const IMG = {
 const BOTTOM_HEIGHT = 100; // altura do rodapé
 const ARROW_SIZE = 44;     // diâmetro do botão da seta
 
-const Entry = ({ navigation }: any) => {
+type EntryNavigation = Pick<
+  NativeStackNavigationProp<RootStackParamList, 'Entry'>,
+  'navigate'
+>;
+
+type Props = {
+  navigation: EntryNavigation;
+};
+
+const Entry = ({ navigation }: Props) => {
   const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);

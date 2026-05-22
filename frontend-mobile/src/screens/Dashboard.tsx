@@ -221,7 +221,7 @@ const Dashboard = () => {
             <View style={styles.fallbackBars}>
               {monthlyData.datasets.map((dataset: { data: number[] }, datasetIndex: number) => {
                 const value = dataset.data[index] ?? 0;
-                const widthPercent = `${Math.max((value / maxValue) * 100, value > 0 ? 8 : 0)}%`;
+                const widthPercent = `${Math.max((value / maxValue) * 100, value > 0 ? 8 : 0)}%` as `${number}%`;
 
                 return (
                   <View key={`${label}-${datasetIndex}`} style={styles.fallbackBarTrack}>

@@ -113,6 +113,7 @@ const Projects = () => {
       await fetchItems();
       return;
     }
+    const itemId = item.id;
 
     Alert.alert(t('projects.deleteTitle'), t('projects.deleteConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
@@ -121,7 +122,7 @@ const Projects = () => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await projectService.delete(item.id);
+            await projectService.delete(itemId);
             await fetchItems();
           } catch (error) {
             console.error('Failed to delete project', error);

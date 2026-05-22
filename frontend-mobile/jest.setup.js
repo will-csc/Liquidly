@@ -17,6 +17,13 @@ jest.mock("expo-camera", () => {
   }
 })
 
+jest.mock("expo-secure-store", () => ({
+  isAvailableAsync: jest.fn(async () => true),
+  getItemAsync: jest.fn(async () => null),
+  setItemAsync: jest.fn(async () => undefined),
+  deleteItemAsync: jest.fn(async () => undefined),
+}))
+
 const originalError = console.error
 console.error = (...args) => {
   const first = args[0]
