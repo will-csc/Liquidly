@@ -2,168 +2,167 @@ package com.liquidly.api.service;
 
 import com.liquidly.api.dto.ReportJobStartResponse;
 import com.liquidly.api.dto.ReportJobStatusResponse;
+import com.liquidly.api.model.ReportJob;
+import com.liquidly.api.repository.ReportJobRepository;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.event.EventListener;
 
 import java.time.Instant;
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ReportJobService {
-    private final Map<String, JobState> jobs = new ConcurrentHashMap<>();
+    private static final List<String> INCOMPLETE_STATUSES = List.of("queued", "running");
+    private final ReportJobRepository reportJobRepository;
 
+    public ReportJobService(ReportJobRepository reportJobRepository) {
+        this.reportJobRepository = reportJobRepository;
+    }
+
+    @Transactional
     public ReportJobStartResponse createJob(Long companyId, Long projectId) {
-        JobState state = new JobState();
-        state.jobId = UUID.randomUUID().toString();
-        state.companyId = companyId;
-        state.projectId = projectId;
-        state.status = "queued";
-        state.progress = 0;
-        state.stage = "Fila";
-        state.message = "Relatório entrou na fila de processamento.";
-        state.totalSteps = 100;
-        state.completedSteps = 0;
-        state.remainingSteps = 100;
-        state.startedAt = Instant.now();
-        state.updatedAt = state.startedAt;
-        jobs.put(state.jobId, state);
-        return new ReportJobStartResponse(state.jobId, state.status, state.progress, state.message);
+        Instant now = Instant.now();
+        ReportJob state = new ReportJob();
+        state.setJobId(UUID.randomUUID().toString());
+        state.setCompanyId(companyId);
+        state.setProjectId(projectId);
+        state.setStatus("queued");
+        state.setProgress(0);
+        state.setStage("Fila");
+        state.setMessage("Relatório entrou na fila de processamento.");
+        state.setTotalSteps(100);
+        state.setCompletedSteps(0);
+        state.setRemainingSteps(100);
+        state.setStartedAt(now);
+        state.setUpdatedAt(now);
+        reportJobRepository.save(state);
+        return new ReportJobStartResponse(state.getJobId(), state.getStatus(), state.getProgress(), state.getMessage());
     }
 
+    @Transactional(readOnly = true)
     public ReportJobStatusResponse getJob(String jobId, Long companyId) {
-        JobState state = jobs.get(jobId);
-        if (state == null) {
-            throw new RuntimeException("Report job not found");
-        }
-        if (companyId != null && state.companyId != null && !state.companyId.equals(companyId)) {
-            throw new RuntimeException("Report job not found");
-        }
-        synchronized (state) {
-            return toResponse(state);
-        }
+        return toResponse(requireJob(jobId, companyId));
     }
 
+    @Transactional
     public void update(String jobId, int progress, String status, String stage, String message) {
-        JobState state = requireJob(jobId);
-        synchronized (state) {
-            state.status = status;
-            state.progress = clamp(progress);
-            state.stage = stage;
-            state.message = message;
-            state.completedSteps = state.progress;
-            state.remainingSteps = Math.max(0, state.totalSteps - state.completedSteps);
-            state.updatedAt = Instant.now();
-        }
+        ReportJob state = requireJob(jobId, null);
+        state.setStatus(status);
+        state.setProgress(clamp(progress));
+        state.setStage(stage);
+        state.setMessage(message);
+        state.setCompletedSteps(state.getProgress());
+        state.setRemainingSteps(Math.max(0, state.getTotalSteps() - state.getCompletedSteps()));
+        state.setUpdatedAt(Instant.now());
+        reportJobRepository.save(state);
     }
 
+    @Transactional
     public void complete(String jobId, String message) {
         complete(jobId, message, null, null, null);
     }
 
+    @Transactional
     public void complete(String jobId, String message, byte[] fileContent, String fileName, String contentType) {
-        JobState state = requireJob(jobId);
-        synchronized (state) {
-            state.status = "completed";
-            state.progress = 100;
-            state.stage = "Concluido";
-            state.message = message;
-            state.completedSteps = 100;
-            state.remainingSteps = 0;
-            state.updatedAt = Instant.now();
-            state.finishedAt = state.updatedAt;
-            state.errorMessage = null;
-            state.fileContent = fileContent;
-            state.fileName = fileName;
-            state.contentType = contentType;
-        }
+        ReportJob state = requireJob(jobId, null);
+        Instant now = Instant.now();
+        state.setStatus("completed");
+        state.setProgress(100);
+        state.setStage("Concluido");
+        state.setMessage(message);
+        state.setCompletedSteps(100);
+        state.setRemainingSteps(0);
+        state.setUpdatedAt(now);
+        state.setFinishedAt(now);
+        state.setErrorMessage(null);
+        state.setFileContent(fileContent == null ? null : fileContent.clone());
+        state.setFileName(fileName);
+        state.setContentType(contentType);
+        reportJobRepository.save(state);
     }
 
+    @Transactional
     public void fail(String jobId, String message) {
-        JobState state = requireJob(jobId);
-        synchronized (state) {
-            state.status = "failed";
-            state.stage = "Falha";
-            state.errorMessage = message;
-            state.message = "O relatório não pôde ser concluído.";
-            state.updatedAt = Instant.now();
-            state.finishedAt = state.updatedAt;
+        ReportJob state = requireJob(jobId, null);
+        applyFailure(state, message);
+        reportJobRepository.save(state);
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void markInterruptedJobsAsFailed() {
+        List<ReportJob> interruptedJobs = reportJobRepository.findByStatusIn(INCOMPLETE_STATUSES);
+        for (ReportJob job : interruptedJobs) {
+            applyFailure(job, "O processamento foi interrompido porque o backend reiniciou antes da conclusão.");
+        }
+        if (!interruptedJobs.isEmpty()) {
+            reportJobRepository.saveAll(interruptedJobs);
         }
     }
 
-    private JobState requireJob(String jobId) {
-        JobState state = jobs.get(jobId);
-        if (state == null) {
+    private ReportJob requireJob(String jobId, Long companyId) {
+        if (jobId == null || jobId.isBlank()) {
             throw new RuntimeException("Report job not found");
         }
-        return state;
+        if (companyId != null) {
+            return reportJobRepository.findByJobIdAndCompanyId(jobId, companyId)
+                    .orElseThrow(() -> new RuntimeException("Report job not found"));
+        }
+        return reportJobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Report job not found"));
     }
 
     private int clamp(int progress) {
         return Math.max(0, Math.min(100, progress));
     }
 
-    private ReportJobStatusResponse toResponse(JobState state) {
+    private ReportJobStatusResponse toResponse(ReportJob state) {
         ReportJobStatusResponse response = new ReportJobStatusResponse();
-        response.setJobId(state.jobId);
-        response.setCompanyId(state.companyId);
-        response.setProjectId(state.projectId);
-        response.setStatus(state.status);
-        response.setProgress(state.progress);
-        response.setStage(state.stage);
-        response.setMessage(state.message);
-        response.setErrorMessage(state.errorMessage);
-        response.setDownloadReady(state.fileContent != null && state.fileContent.length > 0);
-        response.setFileName(state.fileName);
-        response.setTotalSteps(state.totalSteps);
-        response.setCompletedSteps(state.completedSteps);
-        response.setRemainingSteps(state.remainingSteps);
-        response.setStartedAt(state.startedAt);
-        response.setUpdatedAt(state.updatedAt);
-        response.setFinishedAt(state.finishedAt);
+        response.setJobId(state.getJobId());
+        response.setCompanyId(state.getCompanyId());
+        response.setProjectId(state.getProjectId());
+        response.setStatus(state.getStatus());
+        response.setProgress(state.getProgress());
+        response.setStage(state.getStage());
+        response.setMessage(state.getMessage());
+        response.setErrorMessage(state.getErrorMessage());
+        response.setDownloadReady(state.getFileContent() != null && state.getFileContent().length > 0);
+        response.setFileName(state.getFileName());
+        response.setTotalSteps(state.getTotalSteps());
+        response.setCompletedSteps(state.getCompletedSteps());
+        response.setRemainingSteps(state.getRemainingSteps());
+        response.setStartedAt(state.getStartedAt());
+        response.setUpdatedAt(state.getUpdatedAt());
+        response.setFinishedAt(state.getFinishedAt());
         return response;
     }
 
+    @Transactional(readOnly = true)
     public ReportFile getReportFile(String jobId, Long companyId) {
-        JobState state = jobs.get(jobId);
-        if (state == null) {
-            throw new RuntimeException("Report job not found");
+        ReportJob state = requireJob(jobId, companyId);
+        if (state.getFileContent() == null || state.getFileContent().length == 0) {
+            throw new RuntimeException("Report file not ready");
         }
-        if (companyId != null && state.companyId != null && !state.companyId.equals(companyId)) {
-            throw new RuntimeException("Report job not found");
-        }
-        synchronized (state) {
-            if (state.fileContent == null || state.fileContent.length == 0) {
-                throw new RuntimeException("Report file not ready");
-            }
-            return new ReportFile(
-                    state.fileContent.clone(),
-                    state.fileName == null || state.fileName.isBlank() ? "liquidly_report.xlsx" : state.fileName,
-                    state.contentType == null || state.contentType.isBlank()
-                            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            : state.contentType
-            );
-        }
+        return new ReportFile(
+                state.getFileContent().clone(),
+                state.getFileName() == null || state.getFileName().isBlank() ? "liquidly_report.xlsx" : state.getFileName(),
+                state.getContentType() == null || state.getContentType().isBlank()
+                        ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        : state.getContentType()
+        );
     }
 
-    private static final class JobState {
-        private String jobId;
-        private Long companyId;
-        private Long projectId;
-        private String status;
-        private int progress;
-        private String stage;
-        private String message;
-        private String errorMessage;
-        private int totalSteps;
-        private int completedSteps;
-        private int remainingSteps;
-        private Instant startedAt;
-        private Instant updatedAt;
-        private Instant finishedAt;
-        private byte[] fileContent;
-        private String fileName;
-        private String contentType;
+    private void applyFailure(ReportJob state, String message) {
+        Instant now = Instant.now();
+        state.setStatus("failed");
+        state.setStage("Falha");
+        state.setErrorMessage(message);
+        state.setMessage("O relatório não pôde ser concluído.");
+        state.setUpdatedAt(now);
+        state.setFinishedAt(now);
     }
 
     public record ReportFile(byte[] content, String fileName, String contentType) {

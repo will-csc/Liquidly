@@ -189,4 +189,12 @@ Mobile (`frontend-mobile/package.json`):
 See:
 
 - `docs/deploy-backend-render-and-frontend-vercel.md`
+- `docs/docker-ec2.md`
+
+## Additional Documentation
+
+- `docs/documentacao-tecnica.md`
+- `docs/documentacao-operacional.md`
+- `docs/documentacao-api.md`
+- `docs/roteiro-video-banca.md`
 

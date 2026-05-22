@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: liquidly-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-liquidly}
+      POSTGRES_USER: ${POSTGRES_USER:-liquidly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_now}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-liquidly} -d ${POSTGRES_DB:-liquidly}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - liquidly-net
+
+  email-service:
+    build:
+      context: ./services/email-service
+      dockerfile: Dockerfile
+    container_name: liquidly-email-service
+    restart: unless-stopped
+    environment:
+      EMAIL_SERVICE_API_KEY: ${EMAIL_SERVICE_API_KEY:-change_me}
+      SMTP_SERVER: ${SMTP_SERVER:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+      SMTP_USE_STARTTLS: ${SMTP_USE_STARTTLS:-true}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-liquidly}:${POSTGRES_PASSWORD:-change_me_now}@postgres:5432/${POSTGRES_DB:-liquidly}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    expose:
+      - "5000"
+    networks:
+      - liquidly-net
+
+  backend-api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: liquidly-backend-api
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-production}
+      APP_DATASOURCE_PRIMARY_URL: ""
+      APP_DATASOURCE_PRIMARY_USERNAME: ""
+      APP_DATASOURCE_PRIMARY_PASSWORD: ""
+      APP_DATASOURCE_BACKUP_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-liquidly}
+      APP_DATASOURCE_BACKUP_USERNAME: ${POSTGRES_USER:-liquidly}
+      APP_DATASOURCE_BACKUP_PASSWORD: ${POSTGRES_PASSWORD:-change_me_now}
+      APP_JPA_HIBERNATE_DDL_AUTO: ${APP_JPA_HIBERNATE_DDL_AUTO:-update}
+      APP_SECURITY_JWT_SECRET: ${APP_SECURITY_JWT_SECRET:-replace_with_at_least_32_characters_secret}
+      APP_SECURITY_JWT_EXPIRATION_MS: 3600000
+      APP_SECURITY_JWT_ISSUER: liquidly-backend
+      APP_SECURITY_FACE_LOGIN_ENABLED: ${APP_SECURITY_FACE_LOGIN_ENABLED:-false}
+      APP_SECURITY_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_SECURITY_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:5173}
+      APP_SEED_DEFAULT_USER_ENABLED: ${APP_SEED_DEFAULT_USER_ENABLED:-false}
+      EMAIL_SERVICE_URL: http://email-service:5000
+      EMAIL_SERVICE_BACKUP_URL: http://email-service:5000
+      EMAIL_SERVICE_API_KEY: ${EMAIL_SERVICE_API_KEY:-change_me}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      email-service:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    networks:
+      - liquidly-net
+
+volumes:
+  postgres_data:
+
+networks:
+  liquidly-net:
+    driver: bridge
