@@ -48,7 +48,7 @@ Key folders:
 - `frontend-web/src/services`: API client and service wrappers
 - `frontend-web/src/i18n`: translations and language provider
 
-See: `docs/structure.md` and `docs/running-locally.md`.
+See: `docs/documentação/structure.md` and `docs/tutoriais/running-locally.md`.
 
 ## Backend API (`backend-api/`)
 
@@ -58,7 +58,7 @@ Tech stack:
 - Spring Data JPA
 - PostgreSQL (recommended), with fallback to H2 (in-memory)
 
-See: `docs/structure.md` and `docs/running-locally.md`.
+See: `docs/documentação/structure.md` and `docs/tutoriais/running-locally.md`.
 
 ## Mobile App (`frontend-mobile/`)
 
@@ -68,7 +68,7 @@ Tech stack:
 - Axios
 - React Navigation
 
-See: `docs/structure.md` and `docs/running-locally.md`.
+See: `docs/documentação/structure.md` and `docs/tutoriais/running-locally.md`.
 
 ## Email/Report Service (`services/email-service/`)
 
@@ -78,7 +78,7 @@ Tech stack:
 - SMTP for sending emails
 - Generates Excel reports based on the database contents
 
-See: `docs/running-locally.md` and `docs/structure.md`.
+See: `docs/tutoriais/running-locally.md` and `docs/documentação/structure.md`.
 
 ## Running Locally (Quick Start)
 
@@ -163,13 +163,13 @@ You can configure it via:
   - `VITE_API_URL_PROD`
   - `VITE_API_URL_LOCAL`
 
-See: `docs/running-locally.md`.
+See: `docs/tutoriais/running-locally.md`.
 
 ### Email Service Environment Variables
 
 The email service requires SMTP credentials and (for report generation) database access. Do not commit secrets.
 
-See: `docs/running-locally.md`.
+See: `docs/tutoriais/running-locally.md`.
 
 ## Scripts
 
@@ -188,13 +188,13 @@ Mobile (`frontend-mobile/package.json`):
 
 See:
 
-- `docs/deploy-backend-render-and-frontend-vercel.md`
-- `docs/docker-ec2.md`
+- `docs/tutoriais/deploy-backend-render-and-frontend-vercel.md`
+- `docs/tutoriais/docker-ec2.md`
 
 ## Additional Documentation
 
-- `docs/documentacao-tecnica.md`
-- `docs/documentacao-operacional.md`
-- `docs/documentacao-api.md`
-- `docs/roteiro-video-banca.md`
+- `docs/documentação/documentacao-tecnica.md`
+- `docs/documentação/documentacao-operacional.md`
+- `docs/documentação/documentacao-api.md`
+- `docs/apresentação/roteiro-video-banca.md`
 
