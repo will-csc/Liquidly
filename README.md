@@ -5,7 +5,6 @@ Liquidly is a multi-platform application to help companies consolidate and analy
 ## Overview
 <img width="1875" height="890" alt="image" src="https://github.com/user-attachments/assets/0739b17e-593b-4da8-ab65-47908d928f1b" />
 
-
 The repository contains:
 
 - **Backend API** (Spring Boot + PostgreSQL/H2)
@@ -198,3 +197,4 @@ See:
 - `docs/documentação/documentacao-api.md`
 - `docs/apresentação/roteiro-video-banca.md`
 
+- Appresentation: https://youtu.be/D2DG6kssLro?si=F18UVMNjL_636Zws
