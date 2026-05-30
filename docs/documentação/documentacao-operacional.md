@@ -2,15 +2,37 @@
 
 ## 1. Objetivo
 
-Este documento descreve como operar a stack de backend da `Liquidly` em ambiente local, homologacao ou producao simples em EC2.
+Este documento descreve como operar a stack da `Liquidly` em ambiente local e tambem registra a topologia atualmente publicada.
 
 Escopo deste runbook:
 
 - `backend-api`
 - `postgres`
 - `email-service`
+- `frontend-web`
+
+Topologia atual publicada:
+
+- `frontend-web` na Vercel
+- `backend-api` no Render
+- `email-service` Python na AWS
+- banco PostgreSQL principal no Neon
 
 ## 2. Componentes Operacionais
+
+### 2.0 Mapa de Hospedagem Atual
+
+Distribuicao atual por provedor:
+
+- Vercel: frontend web publico
+- Render: backend API publico
+- AWS: servico Python de e-mail/apoio
+- Neon: banco PostgreSQL principal
+
+URLs publicas atuais:
+
+- frontend web: `https://liquidly.vercel.app`
+- backend API: `https://liquidly-backend.onrender.com`
 
 ### 2.1 Backend API
 
@@ -79,6 +101,10 @@ Usado para:
 - homologacao
 - deploy simples de producao
 
+Observacao:
+
+- no estado atual do projeto, a EC2 nao e a hospedagem principal do backend Java; ela aparece na documentacao como opcao de self-host, enquanto o backend publicado esta no Render e o servico Python esta na AWS
+
 ## 4. Pre-requisitos
 
 ### 4.1 Local sem Docker
@@ -123,7 +149,9 @@ Boas praticas:
 
 ## 6. Subida da Stack com Docker
 
-Na raiz do projeto:
+Esta secao descreve a stack alternativa local/self-hosted.
+
+
 
 ```bash
 cp .env.example .env
@@ -334,6 +362,11 @@ Recomendacoes para EC2:
 - se usar dominio, colocar Nginx ou ALB na frente
 - configurar `APP_SECURITY_CORS_ALLOWED_ORIGIN_PATTERNS` com o dominio real do frontend
 - manter `APP_ENVIRONMENT=production`
+
+Importante:
+
+- esta secao representa um modo alternativo de operacao
+- a topologia principal atualmente publicada usa `Render` para o backend, `Vercel` para o frontend, `AWS` para o servico Python e `Neon` para o banco
 
 ## 15. Checklist de Producao
 

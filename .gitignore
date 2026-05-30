@@ -30,3 +30,6 @@ yarn-error.log*
 # OS Generated Files
 .DS_Store
 Thumbs.db
+
+# Large local-only media
+docs/apresentação/28.05.2026 Video Apresentação Liquidly.mp4

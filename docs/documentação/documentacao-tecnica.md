@@ -30,6 +30,24 @@ Documentos complementares:
 - `docs/tutoriais/running-locally.md`
 - `docs/tutoriais/docker-ec2.md`
 
+## 2.1 Topologia Atual de Hospedagem
+
+No estado atual do projeto, a distribuicao esta separada entre provedores:
+
+- `frontend-web`: Vercel
+- `backend-api`: Render
+- `services/email-service`: AWS
+- banco principal PostgreSQL: Neon
+
+Topologia publica atual:
+
+- frontend web em `https://liquidly.vercel.app`
+- backend API em `https://liquidly-backend.onrender.com`
+
+Observacao importante:
+
+- a documentacao de Docker/EC2 deste repositorio continua valida como estrategia alternativa de self-host, mas nao representa a topologia principal atualmente publicada
+
 ## 3. Arquitetura Logica
 
 ### 3.1 Backend
@@ -193,7 +211,27 @@ Isso aumenta a confiabilidade do fluxo de relatorios em ambiente real.
 
 ## 10. Estrategia de Deploy
 
-O backend, banco e email service podem ser executados via Docker Compose.
+O projeto possui duas estrategias de deploy documentadas:
+
+- topologia publicada atual: Vercel + Render + AWS + Neon
+- topologia alternativa self-hosted: Docker Compose / EC2
+
+### 10.1 Topologia publicada atual
+
+- `frontend-web` publicado na Vercel
+- `backend-api` publicado no Render
+- `services/email-service` Python publicado na AWS
+- PostgreSQL principal hospedado no Neon
+
+Evidencias no codigo/configuracao:
+
+- o frontend web usa como default de producao `https://liquidly-backend.onrender.com`
+- o app mobile tambem usa `https://liquidly-backend.onrender.com` como backend primario
+- o backend documenta o datasource primario como `NEON` em `application.properties`
+
+### 10.2 Topologia alternativa via Docker Compose
+
+O backend, banco e email service tambem podem ser executados via Docker Compose.
 
 Arquivos principais:
 

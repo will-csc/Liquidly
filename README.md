@@ -5,6 +5,26 @@ Liquidly is a multi-platform application to help companies consolidate and analy
 ## Overview
 <img width="1875" height="890" alt="image" src="https://github.com/user-attachments/assets/0739b17e-593b-4da8-ab65-47908d928f1b" />
 
+## Current Hosting
+
+Current production/distribution topology:
+
+- **Frontend Web**: Vercel
+- **Backend API**: Render
+- **Python Email Service**: AWS
+- **Database**: Neon (PostgreSQL)
+
+Current public endpoints:
+
+- Web app: `https://liquidly.vercel.app`
+- Backend API: `https://liquidly-backend.onrender.com`
+
+Infrastructure notes:
+
+- The web frontend is built to use the Render backend in production.
+- The backend is configured to prioritize the primary cloud datasource, documented as Neon, before any local fallback.
+- The Python service remains a separate component and is deployed independently from the backend.
+
 The repository contains:
 
 - **Backend API** (Spring Boot + PostgreSQL/H2)
@@ -189,6 +209,17 @@ See:
 
 - `docs/tutoriais/deploy-backend-render-and-frontend-vercel.md`
 - `docs/tutoriais/docker-ec2.md`
+
+Current deployment model used by the project:
+
+- `frontend-web` on Vercel
+- `backend-api` on Render
+- `services/email-service` on AWS
+- primary PostgreSQL on Neon
+
+Alternative deployment model documented in this repository:
+
+- backend stack via Docker / EC2 for self-hosted scenarios
 
 ## Additional Documentation
 

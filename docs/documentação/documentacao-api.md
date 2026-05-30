@@ -8,6 +8,19 @@ Base URL local:
 http://localhost:8080
 ```
 
+Base URL de producao publicada:
+
+```text
+https://liquidly-backend.onrender.com
+```
+
+Hospedagem atual da solucao:
+
+- frontend web: Vercel
+- backend API: Render
+- servico Python de e-mail: AWS
+- banco PostgreSQL principal: Neon
+
 Prefixo principal:
 
 ```text
@@ -493,6 +506,8 @@ Response:
 - os endpoints novos de criacao de BOM e invoice usam DTOs mais seguros
 - os erros sao normalizados pelo `GlobalExceptionHandler`
 - a API foi desenhada para operar em contexto multi-tenant por empresa
+- o frontend web publicado consome a API em `https://liquidly-backend.onrender.com`
+- o backend esta configurado para priorizar o datasource primario em nuvem antes dos fallbacks locais
 
 ## 13. Proximos Passos Recomendados
 
