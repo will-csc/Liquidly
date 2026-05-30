@@ -22,7 +22,7 @@ O repositorio esta organizado como um monorepo com quatro blocos principais:
 - `backend-api/`: API REST em Spring Boot
 - `frontend-web/`: aplicacao web em React + Vite
 - `frontend-mobile/`: app mobile em Expo/React Native
-- `services/email-service/`: microservico Python para envio de e-mails e relatorios
+- `services/email-service/`: microservico Python para envio de e-mails
 
 Documentos complementares:
 
@@ -69,7 +69,7 @@ O frontend web oferece o painel operacional e analitico do produto. Ele consome 
 - login e autenticacao
 - CRUD de projetos, BOM, POs, invoices e conversoes
 - disparo do processo de liquidacao
-- geracao e download de relatorios
+- solicitacao de geracao de relatorios e acionamento do download via backend
 - dashboard e navegacao administrativa
 
 ### 3.3 Frontend Mobile
@@ -82,7 +82,6 @@ O servico Python e responsavel por:
 
 - envio de e-mail simples
 - envio de codigo de recuperacao de senha
-- envio de relatorios por e-mail
 
 Ele pode ser chamado pelo backend e roda isolado em container proprio.
 
@@ -160,7 +159,7 @@ As entidades centrais do sistema sao:
 3. O backend gera `LiquidationResult`.
 4. O usuario pode iniciar um job assincrono de relatorio.
 5. O `ReportJob` fica persistido no banco com status, progresso e arquivo final.
-6. O frontend acompanha o status e baixa o Excel quando `downloadReady=true`.
+6. O frontend acompanha o status e, quando `downloadReady=true`, solicita ao backend o download do Excel.
 
 ## 7. Seguranca
 

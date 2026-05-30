@@ -65,7 +65,10 @@ Responsavel por:
 
 - envio de codigo de recuperacao
 - envio de e-mails operacionais
-- apoio a envio de relatorios
+
+Observacao:
+
+- o download de relatorios fica no `backend-api`, que expoe o arquivo gerado para consumo do frontend
 
 Porta interna:
 

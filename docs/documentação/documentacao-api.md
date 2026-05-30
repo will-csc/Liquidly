@@ -466,6 +466,10 @@ Response:
 - `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
 - arquivo `.xlsx`
 
+Observacao:
+
+- o backend retorna diretamente o arquivo gerado; nao ha etapa de envio de relatorio pelo servico Python
+
 ### 10.5 CRUD de resultados
 
 - `POST /api/liquidation-results`
@@ -498,7 +502,7 @@ Response:
 ### 11.4 Baixar relatorio
 
 1. consultar status ate `downloadReady=true`
-2. chamar endpoint de download
+2. chamar o endpoint de download do backend para receber o arquivo `.xlsx`
 
 ## 12. Observacoes Importantes
 
