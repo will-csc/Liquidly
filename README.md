@@ -30,13 +30,13 @@ The repository contains:
 - **Backend API** (Spring Boot + PostgreSQL/H2)
 - **Web frontend** (React + TypeScript + Vite)
 - **Mobile app** (Expo + React Native)
-- **Email/Report service** (Python + Flask) used to send recovery emails and generate/send Excel reports
+- **Email service** (Python + Flask) used to send recovery emails
 
 ## Goals
 
 - Centralize BOM, invoice, and PO data for liquidation/consumption analysis
 - Provide dashboards and CRUD screens to manage projects, BOM, conversions, invoices, and POs
-- Generate Excel reports and deliver them via email
+- Generate Excel reports and make them available for download via the backend
 - Support authentication, including face login and password recovery
 
 ## Repository Structure
@@ -46,7 +46,7 @@ At the root:
 - `backend-api/`: Spring Boot REST API
 - `frontend-web/`: React web app (Vite)
 - `frontend-mobile/`: Expo mobile app (React Native)
-- `services/email-service/`: Python Flask service for email + report delivery
+- `services/email-service/`: Python Flask service for email delivery
 - `docs/`: project documentation (how to run each piece locally, deployment notes, etc.)
 - `database/`: database schema utilities
 
@@ -89,13 +89,12 @@ Tech stack:
 
 See: `docs/documentação/structure.md` and `docs/tutoriais/running-locally.md`.
 
-## Email/Report Service (`services/email-service/`)
+## Email Service (`services/email-service/`)
 
 Tech stack:
 
 - Python + Flask
 - SMTP for sending emails
-- Generates Excel reports based on the database contents
 
 See: `docs/tutoriais/running-locally.md` and `docs/documentação/structure.md`.
 
@@ -105,7 +104,7 @@ Prerequisites:
 
 - Node.js 18+ (for web and mobile)
 - Java 17 + Maven (for backend)
-- Python 3.10+ (for email/report service, optional)
+- Python 3.10+ (for email service, optional)
 - PostgreSQL (recommended for realistic data; backend can fall back to H2)
 
 ### 1) Backend API
@@ -145,7 +144,7 @@ npm install
 npm run dev
 ```
 
-### 4) Email/Report Service (Optional)
+### 4) Email Service (Optional)
 
 From the repository root:
 
@@ -186,7 +185,7 @@ See: `docs/tutoriais/running-locally.md`.
 
 ### Email Service Environment Variables
 
-The email service requires SMTP credentials and (for report generation) database access. Do not commit secrets.
+The email service requires SMTP credentials. Do not commit secrets.
 
 See: `docs/tutoriais/running-locally.md`.
 
