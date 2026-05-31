@@ -185,3 +185,8 @@ This is an isolated microservice responsible for sending emails.
 - **`.env`**:
   - **What it is:** Environment variables.
   - **Importance:** Stores passwords and sensitive configuration that should not be written directly in the code for security.
+
+## Useful Links
+
+- Weekly activities to reach the final result: `https://app.notion.com/p/Main-Project-Progress-30e83df511ae80a2afe2f4023cf2f59c?source=copy_link`
+- Backup: `https://drive.google.com/drive/folders/18qyG-tZ395gJhmbnAK0SEfywt3EJysKK`

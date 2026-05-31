@@ -228,3 +228,8 @@ Alternative deployment model documented in this repository:
 - `docs/apresentação/roteiro-video-banca.md`
 
 - Appresentation: https://youtu.be/D2DG6kssLro?si=F18UVMNjL_636Zws
+
+## Useful Links
+
+- Weekly activities to reach the final result: `https://app.notion.com/p/Main-Project-Progress-30e83df511ae80a2afe2f4023cf2f59c?source=copy_link`
+- Backup: `https://drive.google.com/drive/folders/18qyG-tZ395gJhmbnAK0SEfywt3EJysKK`

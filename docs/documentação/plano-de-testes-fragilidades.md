@@ -495,3 +495,8 @@ Executar obrigatoriamente:
 ## Observacao Final
 
 Os casos acima priorizam os pontos de maior risco tecnico observados na revisao atual. Se o sistema passar por mudancas em autenticacao, modelo de dados, relatorios ou onboarding facial, este plano deve ser revisado antes da proxima rodada de QA.
+
+## Links Uteis
+
+- Atividades separadas por semana para chegar no resultado: `https://app.notion.com/p/Main-Project-Progress-30e83df511ae80a2afe2f4023cf2f59c?source=copy_link`
+- Backup: `https://drive.google.com/drive/folders/18qyG-tZ395gJhmbnAK0SEfywt3EJysKK`

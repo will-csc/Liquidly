@@ -290,3 +290,8 @@ Longo prazo:
 - separar melhor dominios por modulo
 - adicionar fila real para cargas pesadas
 - colocar API gateway ou reverse proxy com TLS e rate limiting
+
+## 14. Links Uteis
+
+- Atividades separadas por semana para chegar no resultado: `https://app.notion.com/p/Main-Project-Progress-30e83df511ae80a2afe2f4023cf2f59c?source=copy_link`
+- Backup: `https://drive.google.com/drive/folders/18qyG-tZ395gJhmbnAK0SEfywt3EJysKK`
